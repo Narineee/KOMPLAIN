@@ -17,6 +17,7 @@ return new class extends Migration
             $table->foreignId('pengajuan_id')->nullable()->constrained('pengajuan')->nullOnDelete()->cascadeOnUpdate();
             $table->string('judul', 150);
             $table->text('pesan');
+            $table->string('tipe', 50)->nullable();
             $table->dateTime('dibaca_pada')->nullable();
             $table->timestamp('created_at')->useCurrent();
 

@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Tambah Kategori Baru - Admin KOMPLAIN</title>
+    <title>Tambah Klasifikasi Baru - Admin KOMPLAIN</title>
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">
@@ -40,7 +40,7 @@
                             Semua Laporan
                         </a>
                         <a href="{{ route('admin.kategori.index') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-800 text-white">
-                            Kategori
+                            Klasifikasi
                         </a>
                         <a href="{{ route('admin.pegawai.index') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-200 hover:text-white hover:bg-indigo-800/60 transition">
                             Pengguna
@@ -75,13 +75,13 @@
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                 </svg>
-                Kembali ke Daftar Kategori
+                Kembali ke Daftar Klasifikasi
             </a>
         </div>
 
         <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 sm:p-8">
-            <h1 class="text-xl sm:text-2xl font-bold text-slate-900 mb-2">Tambah Kategori Baru</h1>
-            <p class="text-xs sm:text-sm text-slate-500 mb-6">Tambahkan kategori pengaduan baru yang dapat dipilih oleh pegawai.</p>
+            <h1 class="text-xl sm:text-2xl font-bold text-slate-900 mb-2">Tambah Klasifikasi / Sub-Klasifikasi</h1>
+            <p class="text-xs sm:text-sm text-slate-500 mb-6">Tambahkan klasifikasi baru atau sub-pilihan turunan beserta penjelasannya.</p>
 
             @if ($errors->any())
                 <div class="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs sm:text-sm">
@@ -96,19 +96,50 @@
             <form action="{{ route('admin.kategori.store') }}" method="POST" class="space-y-5">
                 @csrf
 
+                <!-- Klasifikasi Induk (Parent) -->
+                <div>
+                    <label for="parent_id" class="block text-sm font-semibold text-slate-900 mb-1.5">
+                        Klasifikasi Induk <span class="text-xs font-normal text-slate-500">(Opsional)</span>
+                    </label>
+                    <select name="parent_id" id="parent_id" class="w-full text-xs sm:text-sm rounded-xl border border-slate-300 py-2.5 px-3 text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600">
+                        <option value="">-- Jadikan Sebagai Klasifikasi Utama (Tanpa Induk) --</option>
+                        @foreach ($parentKategoris as $parent)
+                            <option value="{{ $parent->id }}" {{ old('parent_id') == $parent->id ? 'selected' : '' }}>
+                                Sub dari: {{ $parent->nama_kategori }}
+                            </option>
+                        @endforeach
+                    </select>
+                    <p class="text-[11px] text-slate-500 mt-1">Pilih klasifikasi induk jika ini merupakan sub-pilihan (contoh: R2/R3/R4 untuk klasifikasi Kendaraan). Biarkan kosong jika merupakan klasifikasi utama.</p>
+                </div>
+
+                <!-- Nama Klasifikasi -->
                 <div>
                     <label for="nama" class="block text-sm font-semibold text-slate-900 mb-1.5">
-                        Nama Kategori <span class="text-rose-500">*</span>
+                        Nama Klasifikasi / Sub-Klasifikasi <span class="text-rose-500">*</span>
                     </label>
                     <input type="text"
                            name="nama"
                            id="nama"
                            value="{{ old('nama') }}"
                            required
-                           placeholder="Contoh: Sarana & Prasarana Kantor"
+                           placeholder="Contoh: Kendaraan atau Roda 2 (R2)"
                            class="w-full text-xs sm:text-sm rounded-xl border border-slate-300 py-2.5 px-3.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600">
                 </div>
 
+                <!-- Keterangan / Penjelasan -->
+                <div>
+                    <label for="keterangan" class="block text-sm font-semibold text-slate-900 mb-1.5">
+                        Keterangan / Penjelasan Klasifikasi <span class="text-xs font-normal text-slate-500">(Disarankan)</span>
+                    </label>
+                    <textarea name="keterangan"
+                              id="keterangan"
+                              rows="3"
+                              placeholder="Jelaskan mengenai klasifikasi ini, apa saja masalah yang dicakup, sehingga pelapor memahami maksud klasifikasi..."
+                              class="w-full text-xs sm:text-sm rounded-xl border border-slate-300 py-2.5 px-3.5 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600">{{ old('keterangan') }}</textarea>
+                    <p class="text-[11px] text-slate-500 mt-1">Keterangan ini akan ditampilkan kepada pegawai saat memilih klasifikasi pada formulir pengaduan.</p>
+                </div>
+
+                <!-- Status Aktif -->
                 <div>
                     <label class="flex items-center gap-2 text-xs sm:text-sm text-slate-700 cursor-pointer">
                         <input type="checkbox" name="aktif" value="1" {{ old('aktif', '1') === '1' ? 'checked' : '' }} class="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500">
@@ -121,7 +152,7 @@
                         Batal
                     </a>
                     <button type="submit" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs sm:text-sm font-semibold transition shadow-sm">
-                        Simpan Kategori
+                        Simpan Klasifikasi
                     </button>
                 </div>
             </form>

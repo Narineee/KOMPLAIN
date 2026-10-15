@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Kategori;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -24,12 +25,27 @@ class StorePengajuanRequest extends FormRequest
     {
         return [
             'kategori_id' => ['required', 'exists:kategori,id'],
-            'judul' => ['required', 'string', 'max:200'],
             'isi_laporan' => ['required', 'string', 'min:10'],
             'saran_penyelesaian' => ['nullable', 'string', 'max:1000'],
             'is_anonim' => ['nullable', 'boolean'],
             'lampiran.*' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf,doc,docx', 'max:5120'],
         ];
+    }
+
+    /**
+     * Configure the validator instance.
+     */
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($validator) {
+            $kategoriId = $this->input('kategori_id');
+            if ($kategoriId) {
+                $kategori = Kategori::withCount('activeChildren')->find($kategoriId);
+                if ($kategori && $kategori->active_children_count > 0) {
+                    $validator->errors()->add('kategori_id', "Silakan pilih salah satu sub-pilihan/jenis spesifik untuk kategori {$kategori->nama_kategori}.");
+                }
+            }
+        });
     }
 
     /**
@@ -42,8 +58,6 @@ class StorePengajuanRequest extends FormRequest
         return [
             'kategori_id.required' => 'Kategori laporan wajib dipilih.',
             'kategori_id.exists' => 'Kategori laporan tidak valid.',
-            'judul.required' => 'Judul laporan wajib diisi.',
-            'judul.max' => 'Judul laporan maksimal 255 karakter.',
             'isi_laporan.required' => 'Isi laporan wajib diisi.',
             'isi_laporan.min' => 'Isi laporan minimal 10 karakter.',
             'lampiran.*.mimes' => 'Format berkas lampiran harus berupa JPG, PNG, PDF, atau DOC/DOCX.',

@@ -40,7 +40,7 @@
                             Semua Laporan
                         </a>
                         <a href="{{ route('admin.kategori.index') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-200 hover:text-white hover:bg-indigo-800/60 transition">
-                            Kategori
+                            Klasifikasi
                         </a>
                         <a href="{{ route('admin.pegawai.index') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-800 text-white">
                             Pengguna
@@ -89,6 +89,15 @@
             </div>
         @endif
 
+        @if (session('info'))
+            <div class="mb-6 p-4 rounded-xl bg-sky-50 border border-sky-200 text-sky-800 text-sm flex items-center gap-2 shadow-sm">
+                <svg class="w-5 h-5 text-sky-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>{{ session('info') }}</span>
+            </div>
+        @endif
+
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
             <div>
                 <h1 class="text-2xl font-bold text-slate-900">Manajemen Pengguna</h1>
@@ -106,7 +115,7 @@
 
         <!-- Filter Box -->
         <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm mb-6">
-            <form action="{{ route('admin.pegawai.index') }}" method="GET" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <form action="{{ route('admin.pegawai.index') }}" method="GET" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">Cari Nama / NIP / Email</label>
                     <input type="text"
@@ -134,6 +143,15 @@
                                 {{ $u->nama_unit }}
                             </option>
                         @endforeach
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Status Akun</label>
+                    <select name="status" class="w-full text-xs rounded-xl border border-slate-300 px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600">
+                        <option value="">-- Semua Status --</option>
+                        <option value="aktif" {{ ($filter['status'] ?? '') === 'aktif' ? 'selected' : '' }}>Aktif</option>
+                        <option value="nonaktif" {{ ($filter['status'] ?? '') === 'nonaktif' ? 'selected' : '' }}>Nonaktif</option>
                     </select>
                 </div>
 

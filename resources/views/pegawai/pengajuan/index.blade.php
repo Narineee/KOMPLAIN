@@ -91,9 +91,9 @@
                 <table class="w-full text-left text-xs sm:text-sm">
                     <thead class="bg-slate-50/70 border-b border-slate-200 text-slate-600 uppercase font-semibold text-[11px] tracking-wider">
                         <tr>
-                            <th class="py-3 px-4">Nomor Tiket</th>
-                            <th class="py-3 px-4">Judul Pengaduan</th>
-                            <th class="py-3 px-4">Kategori</th>
+                            <th class="py-3 px-4">ID</th>
+                            <th class="py-3 px-4">Uraian Pengaduan</th>
+                            <th class="py-3 px-4">Klasifikasi</th>
                             <th class="py-3 px-4">Tanggal Pengajuan</th>
                             <th class="py-3 px-4">Status</th>
                             <th class="py-3 px-4 text-right">Aksi</th>
@@ -102,17 +102,25 @@
                     <tbody class="divide-y divide-slate-100 text-slate-700">
                         @forelse ($pengajuans as $lap)
                             <tr class="hover:bg-slate-50/50 transition">
-                                <td class="py-3.5 px-4 font-mono font-medium text-slate-900">{{ $lap->nomor_tiket }}</td>
-                                <td class="py-3.5 px-4 font-semibold text-slate-900">{{ $lap->judul }}</td>
-                                <td class="py-3.5 px-4">{{ $lap->kategori->nama ?? '-' }}</td>
+                                <td class="py-3.5 px-4 font-mono font-medium text-slate-900">#{{ $lap->id }}</td>
+                                <td class="py-3.5 px-4 max-w-xs text-slate-900 font-medium">
+                                    {{ Str::limit($lap->deskripsi ?? $lap->isi_laporan, 50) }}
+                                </td>
+                                <td class="py-3.5 px-4">
+                                    <span class="font-medium text-slate-900 block">{{ $lap->kategori->nama_kategori ?? '-' }}</span>
+                                    @if ($lap->kategori?->parent)
+                                        <span class="text-[11px] text-slate-500 block">Sub dari: {{ $lap->kategori->parent->nama_kategori }}</span>
+                                    @endif
+                                </td>
                                 <td class="py-3.5 px-4 text-slate-500">{{ $lap->created_at->format('d M Y, H:i') }}</td>
                                 <td class="py-3.5 px-4">
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold
-                                        @if($lap->status === 'diajukan') bg-blue-100 text-blue-800
-                                        @elseif($lap->status === 'diproses') bg-amber-100 text-amber-800
+                                        @if(in_array($lap->status, ['diajukan', 'menunggu'])) bg-amber-100 text-amber-800
+                                        @elseif($lap->status === 'diproses') bg-blue-100 text-blue-800
+                                        @elseif($lap->status === 'selesai' && $lap->sub_status === 'selesai_ditolak') bg-rose-100 text-rose-800
                                         @elseif($lap->status === 'selesai') bg-emerald-100 text-emerald-800
-                                        @else bg-rose-100 text-rose-800 @endif">
-                                        {{ ucfirst($lap->status) }}
+                                        @else bg-slate-100 text-slate-800 @endif">
+                                        {{ $lap->status_label }}
                                     </span>
                                 </td>
                                 <td class="py-3.5 px-4 text-right">

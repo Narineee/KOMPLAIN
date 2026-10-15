@@ -64,7 +64,7 @@ class User extends Authenticatable
 
     public function tanggapans(): HasMany
     {
-        return $this->hasMany(Tanggapan::class);
+        return $this->hasMany(Tanggapan::class, 'admin_id');
     }
 
     public function notifikasis(): HasMany

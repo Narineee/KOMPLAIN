@@ -26,11 +26,9 @@ class CekPengajuanTest extends TestCase
         $tokenHash = hash('sha256', $plainToken);
 
         $pengajuan = Pengajuan::create([
-            'nomor_tiket' => 'TKT-20261009-12345',
             'user_id' => null,
             'kategori_id' => $kategori->id,
-            'judul' => 'Pengaduan Anonim Berhasil',
-            'isi_laporan' => 'Isi laporan pengaduan anonim.',
+            'deskripsi' => 'Isi laporan pengaduan anonim.',
             'is_anonim' => true,
             'status' => 'diajukan',
         ]);
@@ -41,7 +39,7 @@ class CekPengajuanTest extends TestCase
         ]);
 
         $response = $this->post(route('cek-pengajuan.check'), [
-            'nomor_tiket' => 'TKT-20261009-12345',
+            'nomor_tiket' => '#'.$pengajuan->id,
             'token' => $plainToken,
         ]);
 
@@ -52,7 +50,7 @@ class CekPengajuanTest extends TestCase
     public function test_public_cannot_verify_with_invalid_ticket(): void
     {
         $response = $this->post(route('cek-pengajuan.check'), [
-            'nomor_tiket' => 'TKT-NOT-EXIST',
+            'nomor_tiket' => '999999',
             'token' => 'random-token',
         ]);
 
@@ -64,11 +62,9 @@ class CekPengajuanTest extends TestCase
         $kategori = Kategori::create(['nama' => 'Pelayanan', 'is_aktif' => true]);
 
         $pengajuan = Pengajuan::create([
-            'nomor_tiket' => 'TKT-20261009-12345',
             'user_id' => null,
             'kategori_id' => $kategori->id,
-            'judul' => 'Pengaduan Anonim',
-            'isi_laporan' => 'Isi laporan pengaduan anonim.',
+            'deskripsi' => 'Isi laporan pengaduan anonim.',
             'is_anonim' => true,
             'status' => 'diajukan',
         ]);
@@ -79,7 +75,7 @@ class CekPengajuanTest extends TestCase
         ]);
 
         $response = $this->post(route('cek-pengajuan.check'), [
-            'nomor_tiket' => 'TKT-20261009-12345',
+            'nomor_tiket' => '#'.$pengajuan->id,
             'token' => 'wrong-token',
         ]);
 

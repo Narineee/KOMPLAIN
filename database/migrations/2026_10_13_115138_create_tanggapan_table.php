@@ -16,6 +16,7 @@ return new class extends Migration
             $table->foreignId('pengajuan_id')->constrained('pengajuan')->cascadeOnDelete()->cascadeOnUpdate();
             $table->foreignId('admin_id')->constrained('users')->restrictOnDelete()->cascadeOnUpdate();
             $table->text('isi_tanggapan');
+            $table->boolean('is_internal')->default(false);
             $table->timestamps();
 
             $table->index('pengajuan_id', 'idx_tanggapan_pengajuan');

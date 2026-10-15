@@ -17,7 +17,7 @@ class TanggapanController extends Controller
     {
         $validated = $request->validate([
             'pesan' => ['required', 'string', 'min:3'],
-            'is_internal' => ['boolean'],
+            'is_internal' => ['nullable', 'boolean'],
         ], [
             'pesan.required' => 'Pesan tanggapan wajib diisi.',
             'pesan.min' => 'Pesan tanggapan minimal 3 karakter.',
@@ -28,8 +28,8 @@ class TanggapanController extends Controller
 
         $tanggapan = Tanggapan::create([
             'pengajuan_id' => $pengajuan->id,
-            'user_id' => $admin->id,
-            'pesan' => $validated['pesan'],
+            'admin_id' => $admin->id,
+            'isi_tanggapan' => $validated['pesan'],
             'is_internal' => $isInternal,
         ]);
 
@@ -39,7 +39,7 @@ class TanggapanController extends Controller
                 'user_id' => $pengajuan->user_id,
                 'pengajuan_id' => $pengajuan->id,
                 'judul' => 'Tanggapan Baru untuk Laporan Anda',
-                'pesan' => "Administrator telah memberikan tanggapan baru pada laporan {$pengajuan->nomor_tiket}.",
+                'pesan' => "Administrator telah memberikan tanggapan baru pada laporan #{$pengajuan->id}.",
                 'tipe' => 'tanggapan_baru',
             ]);
         }

@@ -27,6 +27,10 @@ class AdminPegawaiController extends Controller
             $query->where('unit_id', $request->query('unit_id'));
         }
 
+        if ($request->filled('status')) {
+            $query->where('status_akun', $request->query('status'));
+        }
+
         if ($request->filled('q')) {
             $keyword = trim($request->query('q'));
             $query->where(function ($q) use ($keyword) {
@@ -64,36 +68,37 @@ class AdminPegawaiController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'nip' => ['nullable', 'string', 'max:30', 'unique:users,nip'],
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
+            'nip' => ['required', 'string', 'max:30', 'unique:users,nip'],
+            'name' => ['required', 'string', 'max:150'],
+            'email' => ['required', 'email', 'max:150', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8'],
             'role' => ['required', 'in:admin,pegawai'],
             'unit_id' => ['nullable', 'exists:unit,id'],
-            'no_telp' => ['nullable', 'string', 'max:20'],
             'is_aktif' => ['boolean'],
         ], [
             'name.required' => 'Nama lengkap wajib diisi.',
             'email.required' => 'Email wajib diisi.',
             'email.unique' => 'Email sudah digunakan.',
+            'nip.required' => 'NIP wajib diisi.',
             'nip.unique' => 'NIP sudah terdaftar.',
             'password.required' => 'Password wajib diisi.',
             'password.min' => 'Password minimal 8 karakter.',
+            'role.required' => 'Peran (role) wajib dipilih.',
+            'role.in' => 'Peran harus berupa admin atau pegawai.',
+            'unit_id.exists' => 'Unit kerja tidak valid.',
         ]);
 
         User::create([
-            'nip' => $validated['nip'] ?? null,
+            'nip' => $validated['nip'],
             'nama' => $validated['name'],
-            'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
             'role' => $validated['role'],
             'unit_id' => $validated['unit_id'] ?? null,
-            'no_telp' => $validated['no_telp'] ?? null,
-            'is_aktif' => $request->boolean('is_aktif', true),
+            'status_akun' => $request->boolean('is_aktif', true) ? 'aktif' : 'nonaktif',
         ]);
 
-        return redirect()->route('admin.pegawai.index')->with('success', 'Akun pegawai berhasil ditambahkan.');
+        return redirect()->route('admin.pegawai.index')->with('success', 'Akun pengguna berhasil ditambahkan.');
     }
 
     /**
@@ -115,30 +120,41 @@ class AdminPegawaiController extends Controller
     public function update(Request $request, User $user): RedirectResponse
     {
         $validated = $request->validate([
-            'nip' => ['nullable', 'string', 'max:30', Rule::unique('users', 'nip')->ignore($user->id)],
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
+            'nip' => ['required', 'string', 'max:30', Rule::unique('users', 'nip')->ignore($user->id)],
+            'name' => ['required', 'string', 'max:150'],
+            'email' => ['required', 'email', 'max:150', Rule::unique('users', 'email')->ignore($user->id)],
             'password' => ['nullable', 'string', 'min:8'],
             'role' => ['required', 'in:admin,pegawai'],
             'unit_id' => ['nullable', 'exists:unit,id'],
-            'no_telp' => ['nullable', 'string', 'max:20'],
             'is_aktif' => ['boolean'],
         ], [
             'name.required' => 'Nama lengkap wajib diisi.',
             'email.required' => 'Email wajib diisi.',
             'email.unique' => 'Email sudah digunakan.',
+            'nip.required' => 'NIP wajib diisi.',
             'nip.unique' => 'NIP sudah terdaftar.',
             'password.min' => 'Password minimal 8 karakter.',
+            'role.required' => 'Peran (role) wajib dipilih.',
+            'role.in' => 'Peran harus berupa admin atau pegawai.',
+            'unit_id.exists' => 'Unit kerja tidak valid.',
         ]);
 
+        if ($user->id === auth()->id()) {
+            if (! $request->boolean('is_aktif', true)) {
+                return back()->withInput()->with('error', 'Anda tidak dapat menonaktifkan akun Anda sendiri.');
+            }
+            if ($validated['role'] !== 'admin') {
+                return back()->withInput()->with('error', 'Anda tidak dapat mengubah role akun Anda sendiri.');
+            }
+        }
+
         $updateData = [
-            'nip' => $validated['nip'] ?? null,
-            'name' => $validated['name'],
+            'nip' => $validated['nip'],
+            'nama' => $validated['name'],
             'email' => $validated['email'],
             'role' => $validated['role'],
             'unit_id' => $validated['unit_id'] ?? null,
-            'no_telp' => $validated['no_telp'] ?? null,
-            'is_aktif' => $request->boolean('is_aktif', true),
+            'status_akun' => $request->boolean('is_aktif', true) ? 'aktif' : 'nonaktif',
         ];
 
         if (! empty($validated['password'])) {
@@ -147,7 +163,7 @@ class AdminPegawaiController extends Controller
 
         $user->update($updateData);
 
-        return redirect()->route('admin.pegawai.index')->with('success', 'Data pegawai berhasil diperbarui.');
+        return redirect()->route('admin.pegawai.index')->with('success', 'Data pengguna berhasil diperbarui.');
     }
 
     /**
@@ -159,11 +175,12 @@ class AdminPegawaiController extends Controller
             return back()->with('error', 'Anda tidak dapat menonaktifkan akun Anda sendiri.');
         }
 
+        $newStatus = $user->is_aktif ? 'nonaktif' : 'aktif';
         $user->update([
-            'is_aktif' => ! $user->is_aktif,
+            'status_akun' => $newStatus,
         ]);
 
-        $statusTeks = $user->is_aktif ? 'diaktifkan' : 'dinonaktifkan';
+        $statusTeks = $newStatus === 'aktif' ? 'diaktifkan' : 'dinonaktifkan';
 
         return back()->with('success', "Status akun {$user->name} berhasil {$statusTeks}.");
     }
@@ -178,7 +195,7 @@ class AdminPegawaiController extends Controller
         }
 
         if ($user->pengajuans()->exists() || $user->tanggapans()->exists()) {
-            $user->update(['is_aktif' => false]);
+            $user->update(['status_akun' => 'nonaktif']);
 
             return back()->with('info', 'Akun tidak dapat dihapus permanen karena memiliki riwayat laporan atau tanggapan terkait. Status akun telah diubah menjadi nonaktif.');
         }

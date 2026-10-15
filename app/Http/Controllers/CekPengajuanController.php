@@ -33,8 +33,10 @@ class CekPengajuanController extends Controller
         $nomorTiket = trim($validated['nomor_tiket']);
         $inputToken = trim($validated['token']);
 
+        $id = (int) ltrim($nomorTiket, '#');
+
         $pengajuan = Pengajuan::with(['tokenPengajuan'])
-            ->where('nomor_tiket', $nomorTiket)
+            ->where('id', $id)
             ->first();
 
         if (! $pengajuan || ! $pengajuan->tokenPengajuan) {

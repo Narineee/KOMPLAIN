@@ -50,6 +50,8 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     // Manajemen & Detail Laporan
     Route::get('/laporan', [AdminDashboardController::class, 'laporanIndex'])->name('laporan.index');
     Route::get('/laporan/{pengajuan}', [AdminDashboardController::class, 'laporanShow'])->name('laporan.show');
+    Route::post('/laporan/{pengajuan}/buka-anonim', [AdminDashboardController::class, 'revealAnonim'])->name('laporan.reveal-anonim');
+    Route::post('/laporan/{pengajuan}/kunci-anonim', [AdminDashboardController::class, 'lockAnonim'])->name('laporan.lock-anonim');
     Route::patch('/laporan/{pengajuan}/status', [AdminDashboardController::class, 'updateStatus'])->name('laporan.status');
     Route::post('/laporan/{pengajuan}/tanggapan', [TanggapanController::class, 'store'])->name('laporan.tanggapan');
 
@@ -59,7 +61,11 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     // Kelola Master Kategori
     Route::resource('kategori', KategoriController::class)->except(['show']);
 
-    // Kelola Akun Pegawai
+    // Kelola Akun Pegawai & Pengguna
     Route::resource('pegawai', AdminPegawaiController::class)->parameters(['pegawai' => 'user'])->except(['show']);
     Route::patch('/pegawai/{user}/toggle-status', [AdminPegawaiController::class, 'toggleStatus'])->name('pegawai.toggle-status');
+
+    // Alias Rute Pengguna
+    Route::resource('pengguna', AdminPegawaiController::class)->parameters(['pengguna' => 'user'])->except(['show']);
+    Route::patch('/pengguna/{user}/toggle-status', [AdminPegawaiController::class, 'toggleStatus'])->name('pengguna.toggle-status');
 });

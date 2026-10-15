@@ -12,7 +12,6 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class PengajuanController extends Controller
@@ -24,7 +23,7 @@ class PengajuanController extends Controller
     {
         $user = $request->user();
 
-        $pengajuans = Pengajuan::with(['kategori'])
+        $pengajuans = Pengajuan::with(['kategori.parent'])
             ->where('user_id', $user->id)
             ->latest()
             ->paginate(10);
@@ -39,10 +38,15 @@ class PengajuanController extends Controller
      */
     public function create(): View
     {
-        $kategoris = Kategori::where('aktif', true)->orderBy('nama_kategori')->get();
+        $parentKategoris = Kategori::whereNull('parent_id')
+            ->where('aktif', true)
+            ->with(['activeChildren'])
+            ->orderBy('nama_kategori')
+            ->get();
 
         return view('pegawai.pengajuan.create', [
-            'kategoris' => $kategoris,
+            'parentKategoris' => $parentKategoris,
+            'kategoris' => $parentKategoris,
         ]);
     }
 
@@ -55,15 +59,10 @@ class PengajuanController extends Controller
         $isAnonim = $request->boolean('is_anonim', false);
         $user = $request->user();
 
-        // Generate nomor tiket unik
-        $nomorTiket = $this->generateNomorTiket();
-
-        $pengajuan = DB::transaction(function () use ($validated, $isAnonim, $user, $nomorTiket, $request) {
+        $pengajuan = DB::transaction(function () use ($validated, $isAnonim, $user, $request) {
             $pengajuan = Pengajuan::create([
-                'nomor_tiket' => $nomorTiket,
                 'user_id' => $user->id,
                 'kategori_id' => $validated['kategori_id'],
-                'judul' => $validated['judul'],
                 'deskripsi' => $validated['isi_laporan'],
                 'isi_laporan' => $validated['isi_laporan'],
                 'saran_penyelesaian' => $validated['saran_penyelesaian'] ?? null,
@@ -107,13 +106,13 @@ class PengajuanController extends Controller
                 'user_id' => $user->id,
                 'pengajuan_id' => $pengajuan->id,
                 'judul' => 'Laporan Berhasil Diajukan',
-                'pesan' => "Laporan dengan tiket {$nomorTiket} telah berhasil diajukan dan sedang menunggu tindak lanjut admin.",
+                'pesan' => "Laporan #{$pengajuan->id} telah berhasil diajukan dan sedang dalam proses verifikasi admin.",
             ]);
 
             return $pengajuan;
         });
 
-        return redirect()->route('pegawai.dashboard')->with('status', "Pengaduan Anda ({$nomorTiket}) berhasil diajukan!");
+        return redirect()->route('pegawai.dashboard')->with('status', "Pengaduan Anda (#{$pengajuan->id}) berhasil diajukan!");
     }
 
     /**
@@ -152,17 +151,5 @@ class PengajuanController extends Controller
         return view('pegawai.pengajuan.show', [
             'pengajuan' => $pengajuan,
         ]);
-    }
-
-    /**
-     * Menghasilkan nomor tiket unik format TKT-YYYYMMDD-XXXXX.
-     */
-    private function generateNomorTiket(): string
-    {
-        do {
-            $nomorTiket = 'TKT-'.date('Ymd').'-'.strtoupper(Str::random(5));
-        } while (Pengajuan::where('nomor_tiket', $nomorTiket)->exists());
-
-        return $nomorTiket;
     }
 }

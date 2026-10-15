@@ -11,14 +11,38 @@ use Illuminate\View\View;
 class KategoriController extends Controller
 {
     /**
-     * Menampilkan daftar semua kategori.
+     * Menampilkan daftar semua kategori dengan hierarki dan filter.
      */
-    public function index(): View
+    public function index(Request $request): View
     {
-        $kategoris = Kategori::withCount('pengajuans')->orderBy('nama_kategori')->paginate(10);
+        $query = Kategori::with(['parent', 'children'])
+            ->withCount('pengajuans');
+
+        if ($request->filled('q')) {
+            $keyword = trim($request->query('q'));
+            $query->where(function ($q) use ($keyword) {
+                $q->where('nama_kategori', 'like', "%{$keyword}%")
+                    ->orWhere('keterangan', 'like', "%{$keyword}%");
+            });
+        }
+
+        if ($request->query('tipe') === 'parent') {
+            $query->whereNull('parent_id');
+        } elseif ($request->query('tipe') === 'child') {
+            $query->whereNotNull('parent_id');
+        }
+
+        if ($request->filled('status')) {
+            $query->where('aktif', $request->query('status') === 'aktif');
+        }
+
+        $kategoris = $query->orderByRaw('COALESCE(parent_id, id), parent_id IS NOT NULL, nama_kategori')
+            ->paginate(15)
+            ->withQueryString();
 
         return view('admin.kategori.index', [
             'kategoris' => $kategoris,
+            'filter' => $request->all(),
         ]);
     }
 
@@ -27,31 +51,47 @@ class KategoriController extends Controller
      */
     public function create(): View
     {
-        return view('admin.kategori.create');
+        $parentKategoris = Kategori::whereNull('parent_id')
+            ->where('aktif', true)
+            ->orderBy('nama_kategori')
+            ->get();
+
+        return view('admin.kategori.create', [
+            'parentKategoris' => $parentKategoris,
+        ]);
     }
 
     /**
-     * Menyimpan kategori baru.
+     * Menyimpan kategori baru (kategori utama atau sub-kategori).
      */
     public function store(Request $request): RedirectResponse
     {
+        $parentId = $request->filled('parent_id') ? $request->input('parent_id') : null;
+
         $validated = $request->validate([
-            'nama' => ['required', 'string', 'max:150', 'unique:kategori,nama_kategori'],
-            'deskripsi' => ['nullable', 'string', 'max:500'],
+            'nama' => [
+                'required',
+                'string',
+                'max:100',
+                Rule::unique('kategori', 'nama_kategori')->where(fn ($query) => $query->where('parent_id', $parentId)),
+            ],
+            'parent_id' => ['nullable', 'exists:kategori,id'],
+            'keterangan' => ['nullable', 'string', 'max:1000'],
             'aktif' => ['boolean'],
         ], [
-            'nama.required' => 'Nama kategori wajib diisi.',
-            'nama.unique' => 'Nama kategori sudah digunakan.',
+            'nama.required' => 'Nama klasifikasi pengaduan wajib diisi.',
+            'nama.unique' => 'Nama klasifikasi ini sudah terdaftar pada tingkat hierarki yang sama.',
+            'parent_id.exists' => 'Klasifikasi induk yang dipilih tidak valid.',
         ]);
 
         Kategori::create([
-            'nama' => $validated['nama'],
             'nama_kategori' => $validated['nama'],
-            'deskripsi' => $validated['deskripsi'] ?? null,
+            'parent_id' => $validated['parent_id'] ?? null,
+            'keterangan' => $validated['keterangan'] ?? null,
             'aktif' => $request->boolean('aktif', true),
         ]);
 
-        return redirect()->route('admin.kategori.index')->with('success', 'Kategori baru berhasil ditambahkan.');
+        return redirect()->route('admin.kategori.index')->with('success', 'Klasifikasi pengaduan baru berhasil ditambahkan.');
     }
 
     /**
@@ -59,33 +99,54 @@ class KategoriController extends Controller
      */
     public function edit(Kategori $kategori): View
     {
+        $parentKategoris = Kategori::whereNull('parent_id')
+            ->where('id', '!=', $kategori->id)
+            ->orderBy('nama_kategori')
+            ->get();
+
         return view('admin.kategori.edit', [
             'kategori' => $kategori,
+            'parentKategoris' => $parentKategoris,
         ]);
     }
 
     /**
-     * Memperbarui data kategori.
+     * Memperbarui data kategori dan hierarkinya.
      */
     public function update(Request $request, Kategori $kategori): RedirectResponse
     {
+        $parentId = $request->filled('parent_id') ? $request->input('parent_id') : null;
+
+        if ($parentId && (int) $parentId === (int) $kategori->id) {
+            return back()->withInput()->with('error', 'Klasifikasi tidak dapat menjadi induk bagi dirinya sendiri.');
+        }
+
         $validated = $request->validate([
-            'nama' => ['required', 'string', 'max:150', Rule::unique('kategori', 'nama_kategori')->ignore($kategori->id)],
-            'deskripsi' => ['nullable', 'string', 'max:500'],
+            'nama' => [
+                'required',
+                'string',
+                'max:100',
+                Rule::unique('kategori', 'nama_kategori')
+                    ->where(fn ($query) => $query->where('parent_id', $parentId))
+                    ->ignore($kategori->id),
+            ],
+            'parent_id' => ['nullable', 'exists:kategori,id'],
+            'keterangan' => ['nullable', 'string', 'max:1000'],
             'aktif' => ['boolean'],
         ], [
-            'nama.required' => 'Nama kategori wajib diisi.',
-            'nama.unique' => 'Nama kategori sudah digunakan.',
+            'nama.required' => 'Nama klasifikasi pengaduan wajib diisi.',
+            'nama.unique' => 'Nama klasifikasi ini sudah terdaftar pada tingkat hierarki yang sama.',
+            'parent_id.exists' => 'Klasifikasi induk yang dipilih tidak valid.',
         ]);
 
         $kategori->update([
-            'nama' => $validated['nama'],
             'nama_kategori' => $validated['nama'],
-            'deskripsi' => $validated['deskripsi'] ?? null,
+            'parent_id' => $validated['parent_id'] ?? null,
+            'keterangan' => $validated['keterangan'] ?? null,
             'aktif' => $request->boolean('aktif', true),
         ]);
 
-        return redirect()->route('admin.kategori.index')->with('success', 'Kategori berhasil diperbarui.');
+        return redirect()->route('admin.kategori.index')->with('success', 'Klasifikasi pengaduan berhasil diperbarui.');
     }
 
     /**
@@ -93,15 +154,26 @@ class KategoriController extends Controller
      */
     public function destroy(Kategori $kategori): RedirectResponse
     {
-        if ($kategori->pengajuans()->exists()) {
-            // Jika sudah ada laporan terhubung, nonaktifkan saja untuk integritas data
-            $kategori->update(['aktif' => false]);
+        $hasPengajuan = $kategori->pengajuans()->exists();
 
-            return back()->with('info', 'Kategori tidak dapat dihapus karena sudah memiliki data laporan terkait. Kategori telah dinonaktifkan.');
+        $hasChildPengajuan = false;
+        foreach ($kategori->children as $child) {
+            if ($child->pengajuans()->exists()) {
+                $hasChildPengajuan = true;
+                break;
+            }
         }
 
+        if ($hasPengajuan || $hasChildPengajuan) {
+            $kategori->update(['aktif' => false]);
+            $kategori->children()->update(['aktif' => false]);
+
+            return back()->with('info', 'Klasifikasi tidak dapat dihapus permanen karena memiliki data laporan terkait. Klasifikasi telah dinonaktifkan.');
+        }
+
+        $kategori->children()->delete();
         $kategori->delete();
 
-        return redirect()->route('admin.kategori.index')->with('success', 'Kategori berhasil dihapus.');
+        return redirect()->route('admin.kategori.index')->with('success', 'Klasifikasi pengaduan berhasil dihapus.');
     }
 }

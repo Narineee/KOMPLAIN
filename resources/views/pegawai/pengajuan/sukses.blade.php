@@ -63,16 +63,16 @@
             <!-- Card Informasi Tiket & Token -->
             <div class="mt-6 p-5 rounded-xl bg-slate-50 border border-slate-200 text-left space-y-4">
                 <div>
-                    <span class="block text-xs font-semibold uppercase tracking-wider text-slate-400">Judul Pengaduan</span>
-                    <span class="block text-sm font-bold text-slate-800 mt-0.5">{{ $tiketSukses['judul'] ?? '-' }}</span>
+                    <span class="block text-xs font-semibold uppercase tracking-wider text-slate-400">Uraian Pengaduan</span>
+                    <span class="block text-sm font-bold text-slate-800 mt-0.5">{{ \Illuminate\Support\Str::limit($tiketSukses['deskripsi'] ?? $tiketSukses['isi_laporan'] ?? $tiketSukses['judul'] ?? '-', 50) }}</span>
                 </div>
 
                 <div class="pt-3 border-t border-slate-200/80">
-                    <span class="block text-xs font-semibold uppercase tracking-wider text-slate-400">Nomor Tiket</span>
+                    <span class="block text-xs font-semibold uppercase tracking-wider text-slate-400">ID Pengaduan</span>
                     <div class="flex items-center justify-between mt-1">
-                        <span class="font-mono text-base font-bold text-blue-700">{{ $tiketSukses['nomor_tiket'] ?? '-' }}</span>
+                        <span class="font-mono text-base font-bold text-blue-700">#{{ $tiketSukses['id'] ?? $tiketSukses['nomor_tiket'] ?? '-' }}</span>
                         <button type="button"
-                                onclick="navigator.clipboard.writeText('{{ $tiketSukses['nomor_tiket'] }}'); alert('Nomor tiket berhasil disalin!');"
+                                onclick="navigator.clipboard.writeText('{{ $tiketSukses['id'] ?? $tiketSukses['nomor_tiket'] }}'); alert('ID Pengaduan berhasil disalin!');"
                                 class="text-xs font-medium text-slate-500 hover:text-blue-600 bg-white border border-slate-200 px-2.5 py-1 rounded-md transition shadow-2xs">
                             Salin
                         </button>

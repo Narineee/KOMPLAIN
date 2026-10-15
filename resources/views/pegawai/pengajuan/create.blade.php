@@ -128,7 +128,7 @@
                                     <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                                     </svg>
-                                    Laporan Anonim
+                                    Anonim
                                 </span>
                                 <input type="radio" name="is_anonim" value="1" {{ old('is_anonim') === '1' ? 'checked' : '' }} class="w-4 h-4 text-indigo-600 border-slate-300 focus:ring-indigo-500">
                             </div>
@@ -139,33 +139,51 @@
                     </div>
                 </div>
 
-                <!-- Kategori Laporan -->
+                <!-- Klasifikasi Laporan & Pilihan Sub-Klasifikasi -->
                 <div>
-                    <label for="kategori_id" class="block text-sm font-semibold text-slate-900 mb-1.5">
-                        Kategori Pengaduan <span class="text-rose-500">*</span>
+                    <label for="parent_kategori_select" class="block text-sm font-semibold text-slate-900 mb-1.5">
+                        Klasifikasi Pengaduan <span class="text-rose-500">*</span>
                     </label>
-                    <select name="kategori_id" id="kategori_id" required class="block w-full rounded-xl border border-slate-300 py-2.5 px-3 text-sm text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition">
-                        <option value="">-- Pilih Kategori Permasalahan --</option>
-                        @foreach ($kategoris as $kategori)
-                            <option value="{{ $kategori->id }}" {{ old('kategori_id') == $kategori->id ? 'selected' : '' }}>
-                                {{ $kategori->nama ?? $kategori->nama_kategori }}
+                    <select id="parent_kategori_select" class="block w-full rounded-xl border border-slate-300 py-2.5 px-3 text-sm text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition">
+                        <option value="">-- Pilih Klasifikasi Pengaduan --</option>
+                        @foreach ($parentKategoris as $kategori)
+                            <option value="{{ $kategori->id }}"
+                                    data-keterangan="{{ $kategori->keterangan ?? '' }}"
+                                    data-children="{{ json_encode($kategori->activeChildren->map(fn($c) => ['id' => $c->id, 'nama' => $c->nama_kategori, 'keterangan' => $c->keterangan])) }}">
+                                {{ $kategori->nama_kategori }}
                             </option>
                         @endforeach
                     </select>
-                </div>
 
-                <!-- Judul Laporan -->
-                <div>
-                    <label for="judul" class="block text-sm font-semibold text-slate-900 mb-1.5">
-                        Judul Pengaduan <span class="text-rose-500">*</span>
-                    </label>
-                    <input type="text"
-                           name="judul"
-                           id="judul"
-                           value="{{ old('judul') }}"
-                           required
-                           placeholder="Contoh: AC Ruang Rapat Lt. 2 Bocor dan Tidak Dingin"
-                           class="block w-full rounded-xl border border-slate-300 py-2.5 px-3.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition">
+                    <!-- Info Penjelasan Klasifikasi -->
+                    <div id="kategori_keterangan_box" class="hidden mt-2 p-3.5 rounded-xl bg-blue-50/70 border border-blue-200/80 text-xs text-blue-900 flex items-start gap-2.5 transition">
+                        <svg class="w-4 h-4 text-blue-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <div>
+                            <span class="font-bold block text-blue-950">Penjelasan Klasifikasi:</span>
+                            <span id="kategori_keterangan_text" class="text-blue-800 block mt-0.5 leading-relaxed"></span>
+                        </div>
+                    </div>
+
+                    <!-- Pilihan Sub-Klasifikasi / Opsi Turunan (Misal: R2, R3, R4) -->
+                    <div id="subkategori_wrapper" class="hidden mt-4 p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2.5 transition">
+                        <div class="flex items-center justify-between">
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                                Pilih Jenis / Sub-Klasifikasi Spesifik <span class="text-rose-500">*</span>
+                            </label>
+                            <span class="text-[11px] text-slate-500">Pilih opsi turunan dari klasifikasi</span>
+                        </div>
+                        <div id="subkategori_options_container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                            <!-- Diisi secara dinamis oleh JavaScript -->
+                        </div>
+                    </div>
+
+                    <!-- Hidden input kategori_id yang dikirim ke server -->
+                    <input type="hidden" name="kategori_id" id="kategori_id" value="{{ old('kategori_id') }}">
+                    @error('kategori_id')
+                        <p class="text-xs text-rose-600 mt-1.5">{{ $message }}</p>
+                    @enderror
                 </div>
 
                 <!-- Isi / Uraian Laporan -->
@@ -264,6 +282,127 @@
                 }
             });
         }
+
+        // Logic Interaktif Kategori & Sub-Kategori
+        document.addEventListener('DOMContentLoaded', function () {
+            const parentSelect = document.getElementById('parent_kategori_select');
+            const hiddenKategoriId = document.getElementById('kategori_id');
+            const keteranganBox = document.getElementById('kategori_keterangan_box');
+            const keteranganText = document.getElementById('kategori_keterangan_text');
+            const subkategoriWrapper = document.getElementById('subkategori_wrapper');
+            const subkategoriContainer = document.getElementById('subkategori_options_container');
+
+            const initialKategoriId = "{{ old('kategori_id') }}";
+
+            function updateCategoryUI() {
+                const selectedOption = parentSelect.options[parentSelect.selectedIndex];
+                if (!selectedOption || !selectedOption.value) {
+                    keteranganBox.classList.add('hidden');
+                    subkategoriWrapper.classList.add('hidden');
+                    subkategoriContainer.innerHTML = '';
+                    hiddenKategoriId.value = '';
+                    return;
+                }
+
+                const keterangan = selectedOption.getAttribute('data-keterangan');
+                if (keterangan && keterangan.trim() !== '') {
+                    keteranganText.textContent = keterangan;
+                    keteranganBox.classList.remove('hidden');
+                } else {
+                    keteranganBox.classList.add('hidden');
+                }
+
+                let children = [];
+                try {
+                    children = JSON.parse(selectedOption.getAttribute('data-children') || '[]');
+                } catch (e) {
+                    children = [];
+                }
+
+                if (children.length > 0) {
+                    subkategoriWrapper.classList.remove('hidden');
+                    subkategoriContainer.innerHTML = '';
+
+                    // Jika saat ini hidden bernilai parent id, kosongkan karena harus memilih sub
+                    if (hiddenKategoriId.value === selectedOption.value) {
+                        hiddenKategoriId.value = '';
+                    }
+
+                    children.forEach(child => {
+                        const isChecked = hiddenKategoriId.value == child.id;
+                        const label = document.createElement('label');
+                        label.className = 'flex flex-col p-3 rounded-xl border bg-white cursor-pointer transition hover:border-blue-400 has-[:checked]:border-blue-600 has-[:checked]:bg-blue-50/60 has-[:checked]:ring-2 has-[:checked]:ring-blue-500/20';
+
+                        label.innerHTML = `
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="font-bold text-xs sm:text-sm text-slate-800">${child.nama}</span>
+                                <input type="radio" name="_subkategori_radio" value="${child.id}" ${isChecked ? 'checked' : ''} class="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500">
+                            </div>
+                            ${child.keterangan ? `<p class="text-[11px] text-slate-500 leading-snug">${child.keterangan}</p>` : ''}
+                        `;
+
+                        const radio = label.querySelector('input[type="radio"]');
+                        radio.addEventListener('change', function () {
+                            hiddenKategoriId.value = this.value;
+                        });
+
+                        subkategoriContainer.appendChild(label);
+                    });
+                } else {
+                    subkategoriWrapper.classList.add('hidden');
+                    subkategoriContainer.innerHTML = '';
+                    hiddenKategoriId.value = selectedOption.value;
+                }
+            }
+
+            parentSelect.addEventListener('change', function () {
+                hiddenKategoriId.value = '';
+                updateCategoryUI();
+            });
+
+            // Pulihkan status pilihan jika ada old('kategori_id')
+            if (initialKategoriId) {
+                let matched = false;
+                for (let i = 0; i < parentSelect.options.length; i++) {
+                    const opt = parentSelect.options[i];
+                    if (opt.value == initialKategoriId) {
+                        parentSelect.selectedIndex = i;
+                        matched = true;
+                        break;
+                    }
+                    let children = [];
+                    try {
+                        children = JSON.parse(opt.getAttribute('data-children') || '[]');
+                    } catch(e) {}
+                    if (children.some(c => c.id == initialKategoriId)) {
+                        parentSelect.selectedIndex = i;
+                        matched = true;
+                        break;
+                    }
+                }
+                if (matched) {
+                    hiddenKategoriId.value = initialKategoriId;
+                    updateCategoryUI();
+                }
+            }
+
+            // Cegah submit form jika kategori belum dipilih atau subkategori belum ditentukan
+            const form = hiddenKategoriId.closest('form');
+            if (form) {
+                form.addEventListener('submit', function (e) {
+                    if (!hiddenKategoriId.value) {
+                        e.preventDefault();
+                        if (!parentSelect.value) {
+                            alert('Silakan pilih klasifikasi pengaduan.');
+                            parentSelect.focus();
+                        } else {
+                            alert('Klasifikasi ini memiliki pilihan sub-klasifikasi spesifik. Silakan pilih salah satu opsi yang tersedia.');
+                            subkategoriWrapper.scrollIntoView({ behavior: 'smooth' });
+                        }
+                    }
+                });
+            }
+        });
     </script>
 </body>
 </html>

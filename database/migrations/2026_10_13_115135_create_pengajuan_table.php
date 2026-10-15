@@ -13,17 +13,16 @@ return new class extends Migration
     {
         Schema::create('pengajuan', function (Blueprint $table) {
             $table->id();
-            $table->string('nomor_tiket', 40)->unique();
-            $table->foreignId('user_id')->constrained('users')->restrictOnDelete()->cascadeOnUpdate();
+            $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete()->cascadeOnUpdate();
             $table->foreignId('kategori_id')->constrained('kategori')->restrictOnDelete()->cascadeOnUpdate();
             $table->string('kategori_lainnya', 150)->nullable();
-            $table->string('judul', 200);
             $table->text('deskripsi');
             $table->text('saran_penyelesaian')->nullable();
             $table->enum('metode_identitas', ['identitas', 'anonim'])->default('identitas');
-            $table->enum('status', ['menunggu', 'diproses', 'selesai'])->default('menunggu');
+            $table->enum('status', ['menunggu', 'diproses', 'selesai', 'ditolak'])->default('menunggu');
             $table->boolean('pernyataan_disetujui')->default(false);
             $table->dateTime('waktu_persetujuan')->nullable();
+            $table->dateTime('tanggal_selesai')->nullable();
             $table->timestamps();
 
             $table->index('status', 'idx_pengajuan_status');

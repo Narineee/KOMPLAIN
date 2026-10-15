@@ -3,7 +3,8 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Detail Pengaduan {{ $pengajuan->nomor_tiket }} - Admin KOMPLAIN</title>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>Detail Pengaduan #{{ $pengajuan->id }} - Admin KOMPLAIN</title>
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">
@@ -40,7 +41,7 @@
                             Semua Laporan
                         </a>
                         <a href="{{ route('admin.kategori.index') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-200 hover:text-white hover:bg-indigo-800/60 transition">
-                            Kategori
+                            Klasifikasi
                         </a>
                         <a href="{{ route('admin.pegawai.index') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-200 hover:text-white hover:bg-indigo-800/60 transition">
                             Pengguna
@@ -99,6 +100,15 @@
             </div>
         @endif
 
+        @if (session('error'))
+            <div class="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm flex items-center gap-2 shadow-sm">
+                <svg class="w-5 h-5 text-rose-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>{{ session('error') }}</span>
+            </div>
+        @endif
+
         @if ($errors->any())
             <div class="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs sm:text-sm">
                 <ul class="list-disc list-inside space-y-1">
@@ -116,19 +126,31 @@
                 <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 sm:p-8">
                     <div class="flex flex-wrap items-center justify-between gap-3 mb-4 pb-4 border-b border-slate-100">
                         <div>
-                            <span class="text-xs font-semibold uppercase tracking-wider text-slate-400 block">Nomor Tiket</span>
-                            <span class="font-mono text-xl font-bold text-indigo-700">{{ $pengajuan->nomor_tiket }}</span>
+                            <span class="text-xs font-semibold uppercase tracking-wider text-slate-400 block">ID Pengaduan</span>
+                            <span class="font-mono text-xl font-bold text-indigo-700">#{{ $pengajuan->id }}</span>
                         </div>
                         <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold
-                            @if($pengajuan->status === 'menunggu' || $pengajuan->status === 'diajukan') bg-amber-100 text-amber-800
+                            @if(in_array($pengajuan->status, ['menunggu', 'diajukan'])) bg-amber-100 text-amber-800
                             @elseif($pengajuan->status === 'diproses') bg-blue-100 text-blue-800
+                            @elseif($pengajuan->status === 'selesai' && $pengajuan->sub_status === 'selesai_ditolak') bg-rose-100 text-rose-800
                             @elseif($pengajuan->status === 'selesai') bg-emerald-100 text-emerald-800
-                            @else bg-rose-100 text-rose-800 @endif">
-                            Status: {{ ucfirst($pengajuan->status) }}
+                            @else bg-slate-100 text-slate-800 @endif">
+                            Status: {{ $pengajuan->status_label }}
                         </span>
                     </div>
 
-                    <h1 class="text-xl sm:text-2xl font-bold text-slate-900 mb-4">{{ $pengajuan->judul }}</h1>
+                    <div class="mb-3">
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200/60">
+                            📁 {{ $pengajuan->nama_kategori_lengkap }}
+                        </span>
+                        @if ($pengajuan->kategori?->keterangan)
+                            <p class="text-xs text-slate-500 mt-1 italic">
+                                {{ $pengajuan->kategori->keterangan }}
+                            </p>
+                        @endif
+                    </div>
+
+                    <h1 class="text-xl sm:text-2xl font-bold text-slate-900 mb-4">Pengaduan #{{ $pengajuan->id }}</h1>
 
                     <div class="space-y-4">
                         <div>
@@ -233,40 +255,148 @@
                         @method('PATCH')
 
                         <div>
-                            <label class="block text-xs font-semibold text-slate-700 mb-1">Status Baru <span class="text-rose-500">*</span></label>
-                            <select name="status" required class="w-full text-xs rounded-xl border border-slate-300 p-2.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600">
-                                <option value="menunggu" {{ $pengajuan->status === 'menunggu' ? 'selected' : '' }}>Menunggu Verifikasi</option>
-                                <option value="diproses" {{ $pengajuan->status === 'diproses' ? 'selected' : '' }}>Sedang Diproses / Tindak Lanjut</option>
-                                <option value="selesai" {{ $pengajuan->status === 'selesai' ? 'selected' : '' }}>Selesai Ditangani</option>
-                                <option value="ditolak" {{ $pengajuan->status === 'ditolak' ? 'selected' : '' }}>Ditolak</option>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Status Utama <span class="text-rose-500">*</span></label>
+                            <select id="select-status-utama"
+                                    name="status"
+                                    required
+                                    onchange="handleStatusUtamaChange()"
+                                    class="w-full text-xs rounded-xl border border-slate-300 p-2.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium">
+                                <option value="verifikasi" {{ in_array($pengajuan->status, ['menunggu', 'diajukan']) ? 'selected' : '' }}>Verifikasi (Tahap Awal)</option>
+                                <option value="diproses" {{ $pengajuan->status === 'diproses' ? 'selected' : '' }}>Sedang Diproses (Tindak Lanjut)</option>
+                                <option value="selesai" {{ $pengajuan->status === 'selesai' ? 'selected' : '' }}>Selesai Penanganan</option>
                             </select>
                         </div>
 
+                        <!-- Sub-Status Pilihan Ketika Status == Diproses -->
+                        <div id="wrapper-sub-proses" class="{{ $pengajuan->status === 'diproses' ? '' : 'hidden' }} p-3 rounded-xl bg-blue-50/70 border border-blue-200">
+                            <label class="block text-xs font-bold text-blue-900 mb-1 flex items-center gap-1.5">
+                                <span class="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
+                                Tahap Sub-Proses <span class="text-rose-500">*</span>
+                            </label>
+                            <p class="text-[11px] text-blue-700 mb-2">Tentukan tahapan penanganan saat ini agar transparan bagi pengaju:</p>
+                            <select id="select-sub-proses"
+                                    name="sub_status_proses"
+                                    class="w-full text-xs rounded-lg border border-blue-300 p-2 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/30">
+                                <option value="identifikasi" {{ ($pengajuan->sub_status ?? 'identifikasi') === 'identifikasi' ? 'selected' : '' }}>Identifikasi</option>
+                                <option value="klarifikasi" {{ $pengajuan->sub_status === 'klarifikasi' ? 'selected' : '' }}>Klarifikasi</option>
+                                <option value="rencana_aksi" {{ $pengajuan->sub_status === 'rencana_aksi' ? 'selected' : '' }}>Rencana Aksi</option>
+                                <option value="aksi" {{ $pengajuan->sub_status === 'aksi' ? 'selected' : '' }}>Aksi</option>
+                            </select>
+                        </div>
+
+                        <!-- Sub-Status Pilihan Ketika Status == Selesai -->
+                        <div id="wrapper-sub-selesai" class="{{ $pengajuan->status === 'selesai' ? '' : 'hidden' }} p-3 rounded-xl bg-emerald-50/70 border border-emerald-200">
+                            <label class="block text-xs font-bold text-emerald-900 mb-1 flex items-center gap-1.5">
+                                <span class="w-2 h-2 rounded-full bg-emerald-600"></span>
+                                Hasil Akhir Penanganan <span class="text-rose-500">*</span>
+                            </label>
+                            <p class="text-[11px] text-emerald-700 mb-2">Hasil keputusan setelah seluruh proses dilakukan:</p>
+                            <select id="select-sub-selesai"
+                                    name="sub_status_selesai"
+                                    class="w-full text-xs rounded-lg border border-emerald-300 p-2 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/30">
+                                <option value="selesai_ditangani" {{ ($pengajuan->sub_status ?? 'selesai_ditangani') === 'selesai_ditangani' ? 'selected' : '' }}>✅ Selesai (Ditangani)</option>
+                                <option value="selesai_ditolak" {{ $pengajuan->sub_status === 'selesai_ditolak' ? 'selected' : '' }}>❌ Selesai (Ditolak)</option>
+                            </select>
+                        </div>
+
+                        <!-- Hidden Field yang Mengirimkan sub_status Akhir -->
+                        <input type="hidden" name="sub_status" id="input-sub-status" value="{{ $pengajuan->sub_status }}">
+
                         <div>
-                            <label class="block text-xs font-semibold text-slate-700 mb-1">Catatan Tindak Lanjut</label>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Catatan Tindak Lanjut / Alasan</label>
                             <textarea name="catatan"
                                       rows="3"
-                                      placeholder="Alasan perubahan status atau catatan perbaikan..."
+                                      placeholder="Jelaskan perkembangan tahap atau hasil keputusan penanganan..."
                                       class="w-full text-xs rounded-xl border border-slate-300 p-2.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"></textarea>
                         </div>
 
-                        <button type="submit" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold transition shadow-sm">
-                            Perbarui Status
+                        <button type="submit"
+                                onclick="prepareSubStatusSubmission()"
+                                class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold transition shadow-sm flex items-center justify-center gap-1.5">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                            <span>Simpan Perubahan Status</span>
                         </button>
                     </form>
                 </div>
 
                 <!-- Box Identitas Pelapor -->
-                <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6">
-                    <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">
-                        Identitas Pelapor
-                    </h2>
+                <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6" id="box-identitas-pelapor">
+                    <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-100">
+                        <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wider">
+                            Identitas Pelapor
+                        </h2>
+                        @if ($pengajuan->metode_identitas === 'anonim' || $pengajuan->is_anonim)
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-600">
+                                🔒 Mode Anonim
+                            </span>
+                        @endif
+                    </div>
 
                     @if ($pengajuan->metode_identitas === 'anonim' || $pengajuan->is_anonim)
-                        <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-center">
-                            <span class="text-2xl block mb-1">🔒</span>
-                            <span class="text-xs font-bold text-slate-700 block">Laporan Anonim</span>
-                            <span class="text-[11px] text-slate-500 block mt-0.5">Identitas pelapor dirahasiakan oleh sistem.</span>
+                        <!-- State 1: Terkunci (Default) -->
+                        <div id="wrapper-anonim-terkunci" class="{{ $isAnonimUnlocked ? 'hidden' : '' }} space-y-3">
+                            <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-center">
+                                <span class="text-2xl block mb-1">🔒</span>
+                                <span class="text-xs font-bold text-slate-700 block">Laporan Anonim</span>
+                                <span class="text-[11px] text-slate-500 block mt-0.5">Identitas pelapor dirahasiakan oleh sistem.</span>
+                            </div>
+
+                            <div class="pt-1">
+                                <button type="button"
+                                        id="btn-buka-kunci-anonim"
+                                        onclick="openModalBukaAnonim()"
+                                        class="w-full py-2.5 px-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition shadow-sm">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                                    </svg>
+                                    <span>Buka Kunci Identitas Asli</span>
+                                </button>
+                                <p class="text-[10px] text-slate-400 text-center mt-1.5">
+                                    Khusus Admin &bull; Memerlukan password / kunci otorisasi
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- State 2: Terbuka (Kunci Berhasil Diverifikasi) -->
+                        <div id="wrapper-anonim-terbuka" class="{{ $isAnonimUnlocked ? '' : 'hidden' }} space-y-3">
+                            <div class="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-base">🔓</span>
+                                    <div>
+                                        <span class="font-bold block text-[11px]">Kunci Identitas Terbuka</span>
+                                        <span class="text-[10px] text-amber-700 block">Identitas asli pelapor ditampilkan khusus admin</span>
+                                    </div>
+                                </div>
+                                <form action="{{ route('admin.laporan.lock-anonim', $pengajuan) }}" method="POST" id="form-kunci-kembali">
+                                    @csrf
+                                    <button type="submit"
+                                            onclick="handleKunciKembali(event)"
+                                            class="px-2.5 py-1 bg-amber-200 hover:bg-amber-300 text-amber-900 rounded-lg text-[10px] font-semibold transition">
+                                        Kunci Lagi
+                                    </button>
+                                </form>
+                            </div>
+
+                            <dl class="space-y-3 text-xs pt-1">
+                                <div>
+                                    <dt class="text-slate-400 font-medium">Nama Lengkap</dt>
+                                    <dd id="anonim-nama" class="text-slate-800 font-bold mt-0.5 text-sm">{{ $pengajuan->user->name ?? $pengajuan->user->nama ?? '(Akun Pengguna Tidak Ditemukan)' }}</dd>
+                                </div>
+                                <div>
+                                    <dt class="text-slate-400 font-medium">NIP</dt>
+                                    <dd id="anonim-nip" class="text-slate-800 font-mono font-semibold mt-0.5">{{ $pengajuan->user->nip ?? '-' }}</dd>
+                                </div>
+                                <div>
+                                    <dt class="text-slate-400 font-medium">Unit Kerja</dt>
+                                    <dd id="anonim-unit" class="text-slate-800 font-semibold mt-0.5">{{ $pengajuan->user->unit->nama_unit ?? '-' }}</dd>
+                                </div>
+                                <div>
+                                    <dt class="text-slate-400 font-medium">Email Pegawai</dt>
+                                    <dd id="anonim-email" class="text-slate-800 font-semibold mt-0.5">{{ $pengajuan->user->email ?? '-' }}</dd>
+                                </div>
+                            </dl>
                         </div>
                     @else
                         <dl class="space-y-3 text-xs">
@@ -300,12 +430,21 @@
                         <div class="relative pl-6 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
                             @foreach ($pengajuan->riwayatStatuses as $riw)
                                 <div class="relative text-xs">
-                                    <div class="absolute -left-6 top-1 w-2.5 h-2.5 rounded-full bg-indigo-600 ring-4 ring-white"></div>
-                                    <span class="font-bold text-slate-800 block">
-                                        Status: {{ ucfirst($riw->status_baru) }}
+                                    <div class="absolute -left-6 top-1 w-2.5 h-2.5 rounded-full
+                                        @if($riw->status_baru === 'selesai' && $riw->sub_status_baru === 'selesai_ditolak') bg-rose-500
+                                        @elseif($riw->status_baru === 'selesai') bg-emerald-500
+                                        @elseif($riw->status_baru === 'diproses') bg-blue-500
+                                        @else bg-amber-500 @endif ring-4 ring-white"></div>
+                                    <span class="font-bold text-slate-900 block">
+                                        {{ $riw->status_lengkap_baru }}
                                     </span>
+                                    @if ($riw->status_sebelumnya)
+                                        <span class="text-[11px] text-slate-400 block">
+                                            Sebelumnya: {{ $riw->status_lengkap_sebelumnya }}
+                                        </span>
+                                    @endif
                                     @if ($riw->catatan)
-                                        <p class="text-slate-600 mt-0.5">{{ $riw->catatan }}</p>
+                                        <p class="text-slate-600 mt-1 bg-slate-50 p-2 rounded-lg border border-slate-100">{{ $riw->catatan }}</p>
                                     @endif
                                     <span class="text-[10px] text-slate-400 block mt-1">
                                         {{ $riw->created_at->format('d M Y, H:i') }} &bull; {{ $riw->user->name ?? $riw->user->nama ?? 'Sistem' }}
@@ -324,5 +463,261 @@
     <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-400 mt-10">
         Panel Administrator KOMPLAIN &copy; {{ date('Y') }}
     </footer>
+
+    @if ($pengajuan->metode_identitas === 'anonim' || $pengajuan->is_anonim)
+    <!-- Modal Buka Kunci Identitas Anonim -->
+    <div id="modal-buka-anonim" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <!-- Backdrop -->
+        <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onclick="closeModalBukaAnonim()"></div>
+
+        <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+            <div class="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-md border border-slate-200">
+                <div class="bg-white p-6 sm:p-7">
+                    <div class="flex items-start gap-4">
+                        <div class="mx-auto flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-amber-100 sm:mx-0">
+                            <svg class="h-6 w-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                            </svg>
+                        </div>
+                        <div class="mt-0 text-left flex-1">
+                            <h3 class="text-base font-bold text-slate-900" id="modal-title">
+                                Otorisasi Identitas Anonim
+                            </h3>
+                            <p class="text-xs text-slate-500 mt-1 leading-relaxed">
+                                Pengaduan ini diajukan secara anonim. Masukkan password akun admin atau kunci otorisasi untuk membuka identitas asli pelapor.
+                            </p>
+                        </div>
+                    </div>
+
+                    <form id="form-buka-anonim" action="{{ route('admin.laporan.reveal-anonim', $pengajuan) }}" method="POST" onsubmit="handleBukaAnonimSubmit(event)" class="mt-5 space-y-4">
+                        @csrf
+                        <div id="modal-error-alert" class="hidden p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2">
+                            <svg class="w-4 h-4 text-rose-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span id="modal-error-text">Password salah.</span>
+                        </div>
+
+                        <div>
+                            <label for="input-kunci-password" class="block text-xs font-semibold text-slate-700 mb-1.5">
+                                Password Admin / Kunci Otorisasi <span class="text-rose-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <input type="password"
+                                       name="password"
+                                       id="input-kunci-password"
+                                       required
+                                       autocomplete="current-password"
+                                       placeholder="Ketik password admin..."
+                                       class="w-full text-xs sm:text-sm rounded-xl border border-slate-300 py-2.5 pl-3 pr-10 text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500">
+                                <button type="button"
+                                        onclick="togglePasswordVisibility()"
+                                        class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 text-xs"
+                                        title="Tampilkan / Sembunyikan Password">
+                                    <span id="eye-icon">👁️</span>
+                                </button>
+                            </div>
+                            <p class="text-[11px] text-slate-400 mt-1">
+                                Anda dapat memasukkan password login akun admin Anda saat ini atau kunci keamanan admin.
+                            </p>
+                        </div>
+
+                        <div class="flex items-center justify-end gap-2 pt-2">
+                            <button type="button"
+                                    onclick="closeModalBukaAnonim()"
+                                    class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition">
+                                Batal
+                            </button>
+                            <button type="submit"
+                                    id="btn-submit-unlock"
+                                    class="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-semibold transition shadow-sm flex items-center gap-1.5">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/>
+                                </svg>
+                                <span id="btn-submit-unlock-text">Buka Kunci</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    <script>
+        function handleStatusUtamaChange() {
+            const statusSelect = document.getElementById('select-status-utama');
+            const wrapperProses = document.getElementById('wrapper-sub-proses');
+            const wrapperSelesai = document.getElementById('wrapper-sub-selesai');
+
+            if (!statusSelect || !wrapperProses || !wrapperSelesai) return;
+
+            const val = statusSelect.value;
+            if (val === 'diproses') {
+                wrapperProses.classList.remove('hidden');
+                wrapperSelesai.classList.add('hidden');
+            } else if (val === 'selesai') {
+                wrapperProses.classList.add('hidden');
+                wrapperSelesai.classList.remove('hidden');
+            } else {
+                wrapperProses.classList.add('hidden');
+                wrapperSelesai.classList.add('hidden');
+            }
+        }
+
+        function prepareSubStatusSubmission() {
+            const statusSelect = document.getElementById('select-status-utama');
+            const hiddenSubStatus = document.getElementById('input-sub-status');
+            const selectProses = document.getElementById('select-sub-proses');
+            const selectSelesai = document.getElementById('select-sub-selesai');
+
+            if (!statusSelect || !hiddenSubStatus) return;
+
+            const val = statusSelect.value;
+            if (val === 'diproses') {
+                hiddenSubStatus.value = selectProses ? selectProses.value : 'identifikasi';
+            } else if (val === 'selesai') {
+                hiddenSubStatus.value = selectSelesai ? selectSelesai.value : 'selesai_ditangani';
+            } else {
+                hiddenSubStatus.value = '';
+            }
+        }
+
+        function openModalBukaAnonim() {
+            const modal = document.getElementById('modal-buka-anonim');
+            const input = document.getElementById('input-kunci-password');
+            const alert = document.getElementById('modal-error-alert');
+            if (modal) {
+                if (alert) alert.classList.add('hidden');
+                if (input) input.value = '';
+                modal.classList.remove('hidden');
+                setTimeout(() => input && input.focus(), 60);
+            }
+        }
+
+        function closeModalBukaAnonim() {
+            const modal = document.getElementById('modal-buka-anonim');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function togglePasswordVisibility() {
+            const input = document.getElementById('input-kunci-password');
+            const eye = document.getElementById('eye-icon');
+            if (input) {
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    if (eye) eye.textContent = '🙈';
+                } else {
+                    input.type = 'password';
+                    if (eye) eye.textContent = '👁️';
+                }
+            }
+        }
+
+        async function handleBukaAnonimSubmit(e) {
+            e.preventDefault();
+            const form = document.getElementById('form-buka-anonim');
+            const input = document.getElementById('input-kunci-password');
+            const errorAlert = document.getElementById('modal-error-alert');
+            const errorText = document.getElementById('modal-error-text');
+            const btnSubmit = document.getElementById('btn-submit-unlock');
+            const btnText = document.getElementById('btn-submit-unlock-text');
+
+            if (!input || !input.value.trim()) return;
+
+            if (btnSubmit) btnSubmit.disabled = true;
+            if (btnText) btnText.textContent = 'Memverifikasi...';
+            if (errorAlert) errorAlert.classList.add('hidden');
+
+            try {
+                const formData = new FormData(form);
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+                    || document.querySelector('input[name="_token"]')?.value;
+
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken || '',
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    const elNama = document.getElementById('anonim-nama');
+                    const elNip = document.getElementById('anonim-nip');
+                    const elUnit = document.getElementById('anonim-unit');
+                    const elEmail = document.getElementById('anonim-email');
+
+                    if (elNama) elNama.textContent = data.data.nama || '-';
+                    if (elNip) elNip.textContent = data.data.nip || '-';
+                    if (elUnit) elUnit.textContent = data.data.unit || '-';
+                    if (elEmail) elEmail.textContent = data.data.email || '-';
+
+                    const terkunci = document.getElementById('wrapper-anonim-terkunci');
+                    const terbuka = document.getElementById('wrapper-anonim-terbuka');
+                    if (terkunci) terkunci.classList.add('hidden');
+                    if (terbuka) terbuka.classList.remove('hidden');
+
+                    closeModalBukaAnonim();
+                } else {
+                    if (errorText) errorText.textContent = data.message || 'Password atau kunci otorisasi salah. Akses ditolak.';
+                    if (errorAlert) errorAlert.classList.remove('hidden');
+                }
+            } catch (err) {
+                form.submit();
+            } finally {
+                if (btnSubmit) btnSubmit.disabled = false;
+                if (btnText) btnText.textContent = 'Buka Kunci';
+            }
+        }
+
+        async function handleKunciKembali(e) {
+            e.preventDefault();
+            const form = document.getElementById('form-kunci-kembali');
+            if (!form) return;
+
+            try {
+                const formData = new FormData(form);
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+                    || document.querySelector('input[name="_token"]')?.value;
+
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken || '',
+                    }
+                });
+
+                if (response.ok) {
+                    const terkunci = document.getElementById('wrapper-anonim-terkunci');
+                    const terbuka = document.getElementById('wrapper-anonim-terbuka');
+                    if (terbuka) terbuka.classList.add('hidden');
+                    if (terkunci) terkunci.classList.remove('hidden');
+                } else {
+                    form.submit();
+                }
+            } catch (err) {
+                form.submit();
+            }
+        }
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                closeModalBukaAnonim();
+            }
+        });
+
+        // Initialize state saat halaman dimuat
+        document.addEventListener('DOMContentLoaded', function () {
+            handleStatusUtamaChange();
+        });
+    </script>
 </body>
 </html>

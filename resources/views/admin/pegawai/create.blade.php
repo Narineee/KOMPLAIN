@@ -40,7 +40,7 @@
                             Semua Laporan
                         </a>
                         <a href="{{ route('admin.kategori.index') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-200 hover:text-white hover:bg-indigo-800/60 transition">
-                            Kategori
+                            Klasifikasi
                         </a>
                         <a href="{{ route('admin.pegawai.index') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-800 text-white">
                             Pengguna
@@ -114,12 +114,13 @@
                     <!-- NIP -->
                     <div>
                         <label for="nip" class="block text-sm font-semibold text-slate-900 mb-1.5">
-                            NIP Pegawai
+                            NIP Pegawai <span class="text-rose-500">*</span>
                         </label>
                         <input type="text"
                                name="nip"
                                id="nip"
                                value="{{ old('nip') }}"
+                               required
                                placeholder="198001012005011001"
                                class="w-full text-xs sm:text-sm rounded-xl border border-slate-300 py-2.5 px-3.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600">
                     </div>

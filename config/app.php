@@ -123,4 +123,16 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Kunci Keamanan Akses Identitas Anonim (Admin)
+    |--------------------------------------------------------------------------
+    |
+    | Kunci otorisasi khusus atau password master bagi admin untuk membuka
+    | data identitas asli dari laporan yang berstatus anonim.
+    |
+    */
+
+    'admin_anonim_key' => env('ADMIN_ANONIM_KEY', 'admin123'),
+
 ];
