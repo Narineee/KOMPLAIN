@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Kategori;
 use App\Models\Pengajuan;
+use App\Models\RiwayatStatus;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -39,7 +40,6 @@ class AdminLaporanTest extends TestCase
 
         // Laporan lebih dari 7 hari lalu (misal 10 hari lalu)
         $lapLama = Pengajuan::create([
-            'nomor_tiket' => 'TKT-LAMA-10HARI',
             'user_id' => null,
             'kategori_id' => $kategori->id,
             'judul' => 'Laporan 10 Hari Lalu',
@@ -51,7 +51,6 @@ class AdminLaporanTest extends TestCase
 
         // Laporan dalam kurun 7 hari (3 hari lalu)
         $lap3Hari = Pengajuan::create([
-            'nomor_tiket' => 'TKT-3HARI-LALU',
             'user_id' => null,
             'kategori_id' => $kategori->id,
             'judul' => 'Laporan 3 Hari Lalu',
@@ -63,7 +62,6 @@ class AdminLaporanTest extends TestCase
 
         // Laporan hari ini
         $lapHariIni = Pengajuan::create([
-            'nomor_tiket' => 'TKT-HARI-INI',
             'user_id' => null,
             'kategori_id' => $kategori->id,
             'judul' => 'Laporan Hari Ini',
@@ -95,7 +93,6 @@ class AdminLaporanTest extends TestCase
 
         // 1 Laporan dari tahun lalu
         $lapTahunLalu = Pengajuan::create([
-            'nomor_tiket' => 'TKT-LALU-001',
             'user_id' => null,
             'kategori_id' => $kategori->id,
             'judul' => 'Laporan Tahun Lalu',
@@ -107,7 +104,6 @@ class AdminLaporanTest extends TestCase
 
         // 2 Laporan di bulan ini (realtime bulan berjalan)
         Pengajuan::create([
-            'nomor_tiket' => 'TKT-BULANINI-001',
             'user_id' => null,
             'kategori_id' => $kategori->id,
             'judul' => 'Laporan Bulan Ini 1',
@@ -117,7 +113,6 @@ class AdminLaporanTest extends TestCase
         ]);
 
         Pengajuan::create([
-            'nomor_tiket' => 'TKT-BULANINI-002',
             'user_id' => null,
             'kategori_id' => $kategori->id,
             'judul' => 'Laporan Bulan Ini 2',
@@ -174,30 +169,19 @@ class AdminLaporanTest extends TestCase
             'status' => 'menunggu',
         ]);
 
-        // 1. Pindah ke tahap Identifikasi
+        // 1. Pindah ke tahap Identifikasi / Klarifikasi
         $response1 = $this->actingAs($admin)->patch(route('admin.laporan.status', $pengajuan), [
             'status' => 'diproses',
-            'sub_status' => 'identifikasi',
+            'sub_status' => 'identifikasi_klarifikasi',
             'catatan' => 'Identifikasi akar permasalahan sarana.',
         ]);
         $response1->assertRedirect();
         $fresh = $pengajuan->fresh();
         $this->assertEquals('diproses', $fresh->status);
-        $this->assertEquals('identifikasi', $fresh->sub_status);
-        $this->assertStringContainsString('Identifikasi', $fresh->status_label);
+        $this->assertEquals('identifikasi_klarifikasi', $fresh->sub_status);
+        $this->assertStringContainsString('Identifikasi / Klarifikasi', $fresh->status_label);
 
-        // 2. Lanjut ke tahap Klarifikasi
-        $response2 = $this->actingAs($admin)->patch(route('admin.laporan.status', $pengajuan), [
-            'status' => 'diproses',
-            'sub_status' => 'klarifikasi',
-            'catatan' => 'Klarifikasi dengan teknisi terkait.',
-        ]);
-        $response2->assertRedirect();
-        $fresh = $pengajuan->fresh();
-        $this->assertEquals('diproses', $fresh->status);
-        $this->assertEquals('klarifikasi', $fresh->sub_status);
-
-        // 3. Lanjut ke Rencana Aksi
+        // 2. Lanjut ke Rencana Aksi
         $response3 = $this->actingAs($admin)->patch(route('admin.laporan.status', $pengajuan), [
             'status' => 'diproses',
             'sub_status' => 'rencana_aksi',
@@ -207,7 +191,7 @@ class AdminLaporanTest extends TestCase
         $fresh = $pengajuan->fresh();
         $this->assertEquals('rencana_aksi', $fresh->sub_status);
 
-        // 4. Lanjut ke Aksi / Tindakan
+        // 3. Lanjut ke Aksi / Tindakan
         $response4 = $this->actingAs($admin)->patch(route('admin.laporan.status', $pengajuan), [
             'status' => 'diproses',
             'sub_status' => 'aksi',
@@ -226,7 +210,7 @@ class AdminLaporanTest extends TestCase
         ]);
     }
 
-    public function test_admin_can_update_complaint_status_to_selesai_ditolak(): void
+    public function test_admin_can_update_complaint_status_to_selesai(): void
     {
         $admin = User::factory()->create(['role' => 'admin', 'is_aktif' => true]);
         $kategori = Kategori::create(['nama_kategori' => 'Pelayanan', 'aktif' => true]);
@@ -237,20 +221,19 @@ class AdminLaporanTest extends TestCase
             'deskripsi' => 'Keluhan Di luar SOP',
             'is_anonim' => true,
             'status' => 'diproses',
-            'sub_status' => 'identifikasi',
+            'sub_status' => 'identifikasi_klarifikasi',
         ]);
 
         $response = $this->actingAs($admin)->patch(route('admin.laporan.status', $pengajuan), [
             'status' => 'selesai',
-            'sub_status' => 'selesai_ditolak',
-            'catatan' => 'Setelah proses identifikasi, aduan tidak memenuhi ketentuan yang berlaku.',
+            'catatan' => 'Setelah proses penanganan, aduan telah selesai.',
         ]);
 
         $response->assertRedirect();
         $fresh = $pengajuan->fresh();
         $this->assertEquals('selesai', $fresh->status);
-        $this->assertEquals('selesai_ditolak', $fresh->sub_status);
-        $this->assertEquals('Selesai Ditolak', $fresh->status_label);
+        $this->assertNull($fresh->sub_status);
+        $this->assertEquals('Selesai', $fresh->status_label);
         $this->assertNotNull($fresh->tanggal_selesai);
 
         $this->assertDatabaseHas('riwayat_status', [
@@ -258,12 +241,12 @@ class AdminLaporanTest extends TestCase
             'diubah_oleh' => $admin->id,
             'status_sebelumnya' => 'diproses',
             'status_baru' => 'selesai',
-            'sub_status_sebelumnya' => 'identifikasi',
-            'sub_status_baru' => 'selesai_ditolak',
+            'sub_status_sebelumnya' => 'identifikasi_klarifikasi',
+            'sub_status_baru' => null,
         ]);
     }
 
-    public function test_admin_can_update_complaint_status_to_selesai_ditangani_and_records_tanggal_selesai(): void
+    public function test_admin_can_update_complaint_status_to_selesai_and_records_tanggal_selesai(): void
     {
         $admin = User::factory()->create(['role' => 'admin', 'is_aktif' => true]);
         $kategori = Kategori::create(['nama_kategori' => 'Pelayanan', 'aktif' => true]);
@@ -279,16 +262,53 @@ class AdminLaporanTest extends TestCase
 
         $response = $this->actingAs($admin)->patch(route('admin.laporan.status', $pengajuan), [
             'status' => 'selesai',
-            'sub_status' => 'selesai_ditangani',
             'catatan' => 'Perbaikan lampu sudah selesai dilaksanakan.',
         ]);
 
         $response->assertRedirect();
         $fresh = $pengajuan->fresh();
         $this->assertEquals('selesai', $fresh->status);
-        $this->assertEquals('selesai_ditangani', $fresh->sub_status);
-        $this->assertEquals('Selesai Ditangani', $fresh->status_label);
+        $this->assertNull($fresh->sub_status);
+        $this->assertEquals('Selesai', $fresh->status_label);
         $this->assertNotNull($fresh->tanggal_selesai);
+    }
+
+    public function test_admin_can_update_reviewed_complaint_to_selesai_setelah_tinjau_ulang(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'is_aktif' => true]);
+        $kategori = Kategori::create(['nama_kategori' => 'Pelayanan', 'aktif' => true]);
+
+        $pengajuan = Pengajuan::create([
+            'user_id' => null,
+            'kategori_id' => $kategori->id,
+            'deskripsi' => 'Pengaduan yang ditinjau ulang',
+            'is_anonim' => true,
+            'status' => 'diproses',
+            'sub_status' => 'aksi',
+            'konfirmasi_pelapor' => 'keberatan',
+            'jumlah_keberatan' => 1,
+        ]);
+
+        $response = $this->actingAs($admin)->patch(route('admin.laporan.status', $pengajuan), [
+            'status' => 'selesai',
+            'catatan' => 'Tindak lanjut atas keberatan telah selesai diperiksa dan diperbaiki.',
+        ]);
+
+        $response->assertRedirect();
+        $fresh = $pengajuan->fresh();
+        $this->assertEquals('selesai', $fresh->status);
+        $this->assertEquals('selesai_setelah_tinjau_ulang', $fresh->sub_status);
+        $this->assertEquals('Selesai setelah tinjau ulang', $fresh->status_label);
+        $this->assertNotNull($fresh->tanggal_selesai);
+
+        $this->assertDatabaseHas('riwayat_status', [
+            'pengajuan_id' => $pengajuan->id,
+            'diubah_oleh' => $admin->id,
+            'status_sebelumnya' => 'diproses',
+            'status_baru' => 'selesai',
+            'sub_status_sebelumnya' => 'aksi',
+            'sub_status_baru' => 'selesai_setelah_tinjau_ulang',
+        ]);
     }
 
     public function test_updating_complaint_status_notifies_user_if_not_anonim(): void
@@ -298,7 +318,6 @@ class AdminLaporanTest extends TestCase
         $kategori = Kategori::create(['nama_kategori' => 'Pelayanan', 'aktif' => true]);
 
         $pengajuan = Pengajuan::create([
-            'nomor_tiket' => 'TKT-20261009-ADM04',
             'user_id' => $user->id,
             'kategori_id' => $kategori->id,
             'judul' => 'Pengaduan Beridentitas',
@@ -328,7 +347,6 @@ class AdminLaporanTest extends TestCase
         $kategori = Kategori::create(['nama_kategori' => 'Pelayanan', 'aktif' => true]);
 
         $pengajuan = Pengajuan::create([
-            'nomor_tiket' => 'TKT-20261009-ADM05',
             'user_id' => $user->id,
             'kategori_id' => $kategori->id,
             'judul' => 'Keluhan Sarana Publik',
@@ -364,7 +382,6 @@ class AdminLaporanTest extends TestCase
         $kategori = Kategori::create(['nama_kategori' => 'Pelayanan', 'aktif' => true]);
 
         $pengajuan = Pengajuan::create([
-            'nomor_tiket' => 'TKT-20261009-ADM06',
             'user_id' => $user->id,
             'kategori_id' => $kategori->id,
             'judul' => 'Keluhan Internal Only',
@@ -398,7 +415,6 @@ class AdminLaporanTest extends TestCase
 
         // Laporan A: 2026-10-01
         $lapA = Pengajuan::create([
-            'nomor_tiket' => 'TKT-FILTER-TGL-01',
             'user_id' => null,
             'kategori_id' => $kategori->id,
             'judul' => 'Laporan Awal Bulan',
@@ -410,7 +426,6 @@ class AdminLaporanTest extends TestCase
 
         // Laporan B: 2026-10-10
         $lapB = Pengajuan::create([
-            'nomor_tiket' => 'TKT-FILTER-TGL-02',
             'user_id' => null,
             'kategori_id' => $kategori->id,
             'judul' => 'Laporan Pertengahan Bulan',
@@ -422,7 +437,6 @@ class AdminLaporanTest extends TestCase
 
         // Laporan C: 2026-10-20
         $lapC = Pengajuan::create([
-            'nomor_tiket' => 'TKT-FILTER-TGL-03',
             'user_id' => null,
             'kategori_id' => $kategori->id,
             'judul' => 'Laporan Akhir Bulan',
@@ -510,7 +524,7 @@ class AdminLaporanTest extends TestCase
         $responseUpdate->assertRedirect();
         $this->assertDatabaseHas('pengajuan', [
             'id' => $pengajuan->id,
-            'status' => 'menunggu',
+            'status' => 'verifikasi',
         ]);
     }
 
@@ -708,5 +722,182 @@ class AdminLaporanTest extends TestCase
         $responseUnlocked->assertSee('Bambang Anonim');
         $responseUnlocked->assertSee('Kunci Identitas Terbuka');
         $responseUnlocked->assertSee('Kunci Lagi');
+    }
+
+    public function test_admin_can_download_rekap_pdf(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'is_aktif' => true]);
+        $kategori = Kategori::create(['nama_kategori' => 'Pelayanan', 'aktif' => true]);
+
+        Pengajuan::create([
+            'user_id' => null,
+            'kategori_id' => $kategori->id,
+            'deskripsi' => 'Pengaduan untuk rekap PDF.',
+            'status' => 'menunggu',
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('admin.rekap.pdf'));
+
+        $response->assertStatus(200);
+        $response->assertHeader('Content-Type', 'application/pdf');
+        $this->assertNotEmpty($response->getContent());
+        $this->assertStringStartsWith('%PDF-', $response->getContent());
+    }
+
+    public function test_admin_can_download_rekap_pdf_with_filter(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'is_aktif' => true]);
+        $kategori = Kategori::create(['nama_kategori' => 'Pelayanan', 'aktif' => true]);
+
+        Pengajuan::create([
+            'user_id' => null,
+            'kategori_id' => $kategori->id,
+            'deskripsi' => 'Pengaduan filter status.',
+            'status' => 'diproses',
+            'sub_status' => 'identifikasi',
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('admin.rekap.pdf', [
+            'status' => 'diproses',
+            'kategori_id' => $kategori->id,
+        ]));
+
+        $response->assertStatus(200);
+        $response->assertHeader('Content-Type', 'application/pdf');
+        $this->assertStringStartsWith('%PDF-', $response->getContent());
+    }
+
+    public function test_pegawai_cannot_download_admin_rekap_pdf(): void
+    {
+        $pegawai = User::factory()->create(['role' => 'pegawai', 'is_aktif' => true]);
+
+        $response = $this->actingAs($pegawai)->get(route('admin.rekap.pdf'));
+
+        $response->assertStatus(403);
+    }
+
+    public function test_admin_can_download_laporan_detail_pdf(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'is_aktif' => true]);
+        $kategori = Kategori::create(['nama_kategori' => 'Pelayanan', 'aktif' => true]);
+
+        $pengajuan = Pengajuan::create([
+            'user_id' => null,
+            'kategori_id' => $kategori->id,
+            'deskripsi' => 'Rincian pengaduan untuk dicetak PDF.',
+            'status' => 'menunggu',
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('admin.laporan.pdf', $pengajuan));
+
+        $response->assertStatus(200);
+        $response->assertHeader('Content-Type', 'application/pdf');
+        $this->assertStringStartsWith('%PDF-', $response->getContent());
+    }
+
+    public function test_new_pengajuan_is_belum_verifikasi_and_automatically_becomes_verifikasi_when_admin_opens_detail(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'is_aktif' => true]);
+        $pegawai = User::factory()->create(['role' => 'pegawai', 'is_aktif' => true]);
+        $kategori = Kategori::create(['nama_kategori' => 'Fasilitas', 'aktif' => true]);
+
+        $pengajuan = Pengajuan::create([
+            'user_id' => $pegawai->id,
+            'kategori_id' => $kategori->id,
+            'deskripsi' => 'Pendingin ruangan mati total di ruangan kerja.',
+            'status' => 'belum_verifikasi',
+            'metode_identitas' => 'identitas',
+        ]);
+
+        $this->assertSame('belum_verifikasi', $pengajuan->status);
+        $this->assertSame('Belum Diverifikasi', $pengajuan->status_label);
+
+        // Sebelum dibuka admin: di dashboard dan daftar laporan tertulis "Belum Diverifikasi"
+        $respDashboard = $this->actingAs($admin)->get(route('admin.dashboard'));
+        $respDashboard->assertSee('Belum Diverifikasi');
+
+        $respIndex = $this->actingAs($admin)->get(route('admin.laporan.index'));
+        $respIndex->assertSee('Belum Diverifikasi');
+
+        // Saat admin membuka halaman detail laporan: otomatis diverifikasi
+        $respShow = $this->actingAs($admin)->get(route('admin.laporan.show', $pengajuan));
+        $respShow->assertStatus(200);
+        $respShow->assertSee('Status: Verifikasi');
+
+        $pengajuan->refresh();
+        $this->assertSame('verifikasi', $pengajuan->status);
+        $this->assertSame('Verifikasi', $pengajuan->status_label);
+
+        // Tercatat di riwayat status
+        $this->assertDatabaseHas('riwayat_status', [
+            'pengajuan_id' => $pengajuan->id,
+            'status_sebelumnya' => 'belum_verifikasi',
+            'status_baru' => 'verifikasi',
+            'catatan' => 'Laporan telah dibuka dan diverifikasi oleh admin.',
+        ]);
+
+        // Membuka kedua kali tidak menduplikasi riwayat status
+        $countRiwayat = RiwayatStatus::where('pengajuan_id', $pengajuan->id)->count();
+        $this->actingAs($admin)->get(route('admin.laporan.show', $pengajuan));
+        $this->assertSame($countRiwayat, RiwayatStatus::where('pengajuan_id', $pengajuan->id)->count());
+    }
+
+    public function test_admin_can_mark_laporan_back_to_belum_verifikasi_and_verify_again(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'is_aktif' => true]);
+        $pegawai = User::factory()->create(['role' => 'pegawai', 'is_aktif' => true]);
+        $kategori = Kategori::create(['nama_kategori' => 'Pelayanan', 'aktif' => true]);
+
+        $pengajuan = Pengajuan::create([
+            'user_id' => $pegawai->id,
+            'kategori_id' => $kategori->id,
+            'deskripsi' => 'Pengaduan yang sudah sempat diverifikasi.',
+            'status' => 'verifikasi',
+        ]);
+
+        // 1. Admin menandai kembali sebagai Belum Diverifikasi
+        $respTandai = $this->actingAs($admin)->patch(route('admin.laporan.tandai-belum-verifikasi', $pengajuan));
+        $respTandai->assertRedirect(route('admin.laporan.show', ['pengajuan' => $pengajuan, 'keep_unverified' => 1]));
+
+        $pengajuan->refresh();
+        $this->assertSame('belum_verifikasi', $pengajuan->status);
+
+        $this->assertDatabaseHas('riwayat_status', [
+            'pengajuan_id' => $pengajuan->id,
+            'status_sebelumnya' => 'verifikasi',
+            'status_baru' => 'belum_verifikasi',
+        ]);
+
+        // 2. Admin memverifikasi kembali secara manual
+        $respVerif = $this->actingAs($admin)->patch(route('admin.laporan.verifikasi', $pengajuan));
+        $respVerif->assertRedirect();
+
+        $pengajuan->refresh();
+        $this->assertSame('verifikasi', $pengajuan->status);
+    }
+
+    public function test_admin_can_filter_by_belum_verifikasi(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'is_aktif' => true]);
+        $kategori = Kategori::create(['nama_kategori' => 'Fasilitas', 'aktif' => true]);
+
+        $lapBelum = Pengajuan::create([
+            'user_id' => null,
+            'kategori_id' => $kategori->id,
+            'deskripsi' => 'Laporan khusus status belum verifikasi unik123.',
+            'status' => 'belum_verifikasi',
+        ]);
+
+        $lapSelesai = Pengajuan::create([
+            'user_id' => null,
+            'kategori_id' => $kategori->id,
+            'deskripsi' => 'Laporan khusus status selesai unik456.',
+            'status' => 'selesai',
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('admin.laporan.index', ['status' => 'belum_verifikasi']));
+        $response->assertStatus(200);
+        $response->assertSee('unik123');
+        $response->assertDontSee('unik456');
     }
 }

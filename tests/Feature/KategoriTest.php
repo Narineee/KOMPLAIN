@@ -233,7 +233,6 @@ class KategoriTest extends TestCase
         ]);
 
         Pengajuan::create([
-            'nomor_tiket' => 'TIKET-KAT-01',
             'user_id' => $this->pegawai->id,
             'kategori_id' => $kategori->id,
             'judul' => 'Pengaduan Terkait',

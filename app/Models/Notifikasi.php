@@ -4,11 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['user_id', 'pengajuan_id', 'judul', 'pesan', 'tipe', 'is_dibaca', 'dibaca_pada'])]
+#[Fillable(['user_id', 'pengajuan_id', 'judul', 'pesan', 'tipe', 'dibaca_pada'])]
 #[Table('notifikasi')]
 class Notifikasi extends Model
 {
@@ -19,9 +20,18 @@ class Notifikasi extends Model
     protected function casts(): array
     {
         return [
-            'is_dibaca' => 'boolean',
             'dibaca_pada' => 'datetime',
         ];
+    }
+
+    public function getIsDibacaAttribute(): bool
+    {
+        return $this->dibaca_pada !== null;
+    }
+
+    public function scopeBelumDibaca(Builder $query): Builder
+    {
+        return $query->whereNull('dibaca_pada');
     }
 
     public function user(): BelongsTo

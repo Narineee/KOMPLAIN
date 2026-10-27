@@ -32,14 +32,14 @@ class AuthController extends Controller
     }
 
     /**
-     * Memproses permintaan autentikasi pengguna (Admin & Pengadu).
+     * Memproses permintaan autentikasi pengguna (Satu Pintu Login Terpadu).
      */
     public function login(Request $request): RedirectResponse
     {
         $validated = $request->validate([
             'login' => ['required', 'string'],
             'password' => ['required', 'string'],
-            'role_target' => ['nullable', 'string', 'in:admin,pengadu,pegawai'],
+            'role_target' => ['nullable', 'string'],
         ], [
             'login.required' => 'Email atau NIP wajib diisi.',
             'password.required' => 'Password wajib diisi.',
@@ -47,37 +47,23 @@ class AuthController extends Controller
 
         $login = trim($validated['login']);
         $fieldType = filter_var($login, FILTER_VALIDATE_EMAIL) ? 'email' : 'nip';
-        $roleTarget = $validated['role_target'] ?? null;
 
         $user = User::where($fieldType, $login)->first();
 
         if (! $user) {
-            return back()->withInput($request->only('login', 'role_target'))->withErrors([
+            return back()->withInput($request->only('login'))->withErrors([
                 'login' => 'Akun dengan Email atau NIP tersebut tidak ditemukan.',
             ]);
         }
 
         if (! $user->is_aktif) {
-            return back()->withInput($request->only('login', 'role_target'))->withErrors([
+            return back()->withInput($request->only('login'))->withErrors([
                 'login' => 'Akun Anda dinonaktifkan. Silakan hubungi Administrator.',
             ]);
         }
 
-        // Validasi kesesuaian peran target jika dipilih spesifik
-        if ($roleTarget === 'admin' && ! $user->isAdmin()) {
-            return back()->withInput($request->only('login', 'role_target'))->withErrors([
-                'login' => 'Akun ini terdaftar sebagai Pengadu / Pegawai. Silakan gunakan tab login Pengadu.',
-            ]);
-        }
-
-        if (in_array($roleTarget, ['pengadu', 'pegawai'], true) && $user->isAdmin()) {
-            return back()->withInput($request->only('login', 'role_target'))->withErrors([
-                'login' => 'Akun ini terdaftar sebagai Administrator. Silakan gunakan tab login Admin.',
-            ]);
-        }
-
         if (! Auth::attempt([$fieldType => $login, 'password' => $validated['password']], $request->boolean('remember'))) {
-            return back()->withInput($request->only('login', 'role_target'))->withErrors([
+            return back()->withInput($request->only('login'))->withErrors([
                 'password' => 'Password yang Anda masukkan salah.',
             ]);
         }
@@ -90,7 +76,7 @@ class AuthController extends Controller
         }
 
         return redirect()->intended(route('pegawai.dashboard'))
-            ->with('status', "Selamat datang kembali, {$user->name} (Portal Pengadu)!");
+            ->with('status', "Selamat datang kembali, {$user->name}!");
     }
 
     /**

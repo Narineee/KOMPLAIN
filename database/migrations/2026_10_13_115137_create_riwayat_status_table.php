@@ -14,8 +14,8 @@ return new class extends Migration
         Schema::create('riwayat_status', function (Blueprint $table) {
             $table->id();
             $table->foreignId('pengajuan_id')->constrained('pengajuan')->cascadeOnDelete()->cascadeOnUpdate();
-            $table->enum('status_sebelumnya', ['menunggu', 'diproses', 'selesai', 'ditolak'])->nullable();
-            $table->enum('status_baru', ['menunggu', 'diproses', 'selesai', 'ditolak']);
+            $table->enum('status_sebelumnya', ['belum_verifikasi', 'verifikasi', 'menunggu', 'diproses', 'selesai', 'ditolak'])->nullable();
+            $table->enum('status_baru', ['belum_verifikasi', 'verifikasi', 'menunggu', 'diproses', 'selesai', 'ditolak'])->default('belum_verifikasi');
             $table->foreignId('diubah_oleh')->nullable()->constrained('users')->nullOnDelete()->cascadeOnUpdate();
             $table->text('catatan')->nullable();
             $table->timestamp('created_at')->useCurrent();

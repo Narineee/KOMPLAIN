@@ -42,26 +42,26 @@ class RiwayatStatus extends Model
         }
 
         if ($status === 'diproses' || $status === 'proses') {
-            if ($subStatus && isset(Pengajuan::SUB_STATUS_PROSES[$subStatus])) {
-                return 'Diproses ('.Pengajuan::SUB_STATUS_PROSES[$subStatus].')';
+            $labelSub = match ($subStatus) {
+                'identifikasi_klarifikasi', 'identifikasi', 'klarifikasi' => 'Identifikasi / Klarifikasi',
+                'rencana_aksi' => 'Rencana Aksi',
+                'aksi' => 'Aksi / Tindakan',
+                default => Pengajuan::SUB_STATUS_PROSES[$subStatus] ?? null,
+            };
+
+            if ($labelSub) {
+                return 'Diproses ('.$labelSub.')';
             }
 
             return 'Diproses';
         }
 
-        if ($status === 'selesai') {
-            if ($subStatus === 'selesai_ditolak') {
-                return 'Selesai Ditolak';
-            }
-            if ($subStatus === 'selesai_ditangani') {
-                return 'Selesai Ditangani';
+        if ($status === 'selesai' || $status === 'ditolak') {
+            if ($subStatus === 'selesai_setelah_tinjau_ulang') {
+                return 'Selesai setelah tinjau ulang';
             }
 
             return 'Selesai';
-        }
-
-        if ($status === 'ditolak') {
-            return 'Selesai Ditolak';
         }
 
         return ucfirst($status ?? '-');

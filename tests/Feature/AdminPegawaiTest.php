@@ -364,7 +364,6 @@ class AdminPegawaiTest extends TestCase
         $kategori = Kategori::create(['nama_kategori' => 'Fasilitas']);
 
         Pengajuan::create([
-            'nomor_tiket' => 'TIKET-12345',
             'user_id' => $user->id,
             'kategori_id' => $kategori->id,
             'judul' => 'Laporan uji',

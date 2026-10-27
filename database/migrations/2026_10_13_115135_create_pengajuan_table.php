@@ -19,7 +19,7 @@ return new class extends Migration
             $table->text('deskripsi');
             $table->text('saran_penyelesaian')->nullable();
             $table->enum('metode_identitas', ['identitas', 'anonim'])->default('identitas');
-            $table->enum('status', ['menunggu', 'diproses', 'selesai', 'ditolak'])->default('menunggu');
+            $table->enum('status', ['belum_verifikasi', 'verifikasi', 'menunggu', 'diproses', 'selesai', 'ditolak'])->default('belum_verifikasi');
             $table->boolean('pernyataan_disetujui')->default(false);
             $table->dateTime('waktu_persetujuan')->nullable();
             $table->dateTime('tanggal_selesai')->nullable();

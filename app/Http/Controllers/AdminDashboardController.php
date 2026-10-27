@@ -6,12 +6,15 @@ use App\Models\Kategori;
 use App\Models\Notifikasi;
 use App\Models\Pengajuan;
 use App\Models\RiwayatStatus;
+use App\Services\PdfService;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\Response;
 
 class AdminDashboardController extends Controller
 {
@@ -77,30 +80,33 @@ class AdminDashboardController extends Controller
 
         $row = $query->selectRaw("
             COUNT(*) as total,
-            SUM(CASE WHEN status IN ('diajukan', 'menunggu') THEN 1 ELSE 0 END) as diajukan,
+            SUM(CASE WHEN status = 'belum_verifikasi' THEN 1 ELSE 0 END) as belum_verifikasi,
+            SUM(CASE WHEN status IN ('diajukan', 'menunggu', 'verifikasi') THEN 1 ELSE 0 END) as verifikasi,
             SUM(CASE WHEN status = 'diproses' THEN 1 ELSE 0 END) as diproses,
-            SUM(CASE WHEN status = 'selesai' THEN 1 ELSE 0 END) as selesai,
-            SUM(CASE WHEN (status = 'selesai' AND (sub_status = 'selesai_ditangani' OR sub_status IS NULL)) THEN 1 ELSE 0 END) as selesai_ditangani,
-            SUM(CASE WHEN (status = 'selesai' AND sub_status = 'selesai_ditolak') OR status = 'ditolak' THEN 1 ELSE 0 END) as selesai_ditolak,
-            SUM(CASE WHEN status = 'diproses' AND sub_status = 'identifikasi' THEN 1 ELSE 0 END) as proses_identifikasi,
-            SUM(CASE WHEN status = 'diproses' AND sub_status = 'klarifikasi' THEN 1 ELSE 0 END) as proses_klarifikasi,
+            SUM(CASE WHEN status IN ('selesai', 'ditolak') THEN 1 ELSE 0 END) as selesai,
+            SUM(CASE WHEN status = 'diproses' AND sub_status IN ('identifikasi_klarifikasi', 'identifikasi', 'klarifikasi') THEN 1 ELSE 0 END) as proses_identifikasi_klarifikasi,
             SUM(CASE WHEN status = 'diproses' AND sub_status = 'rencana_aksi' THEN 1 ELSE 0 END) as proses_rencana_aksi,
             SUM(CASE WHEN status = 'diproses' AND sub_status = 'aksi' THEN 1 ELSE 0 END) as proses_aksi
         ")->first();
 
-        $selesaiDitolak = (int) ($row?->selesai_ditolak ?? 0);
+        $selesai = (int) ($row?->selesai ?? 0);
+        $prosesIdentifikasiKlarifikasi = (int) ($row?->proses_identifikasi_klarifikasi ?? 0);
+        $belumVerifikasi = (int) ($row?->belum_verifikasi ?? 0);
+        $verifikasi = (int) ($row?->verifikasi ?? 0);
 
         return [
             'total' => (int) ($row?->total ?? 0),
-            'diajukan' => (int) ($row?->diajukan ?? 0),
-            'verifikasi' => (int) ($row?->diajukan ?? 0),
+            'belum_verifikasi' => $belumVerifikasi,
+            'diajukan' => $belumVerifikasi + $verifikasi,
+            'verifikasi' => $verifikasi,
             'diproses' => (int) ($row?->diproses ?? 0),
-            'selesai' => (int) ($row?->selesai ?? 0),
-            'selesai_ditangani' => (int) ($row?->selesai_ditangani ?? 0),
-            'selesai_ditolak' => $selesaiDitolak,
-            'ditolak' => $selesaiDitolak,
-            'proses_identifikasi' => (int) ($row?->proses_identifikasi ?? 0),
-            'proses_klarifikasi' => (int) ($row?->proses_klarifikasi ?? 0),
+            'selesai' => $selesai,
+            'selesai_ditangani' => $selesai,
+            'selesai_ditolak' => 0,
+            'ditolak' => 0,
+            'proses_identifikasi_klarifikasi' => $prosesIdentifikasiKlarifikasi,
+            'proses_identifikasi' => $prosesIdentifikasiKlarifikasi,
+            'proses_klarifikasi' => 0,
             'proses_rencana_aksi' => (int) ($row?->proses_rencana_aksi ?? 0),
             'proses_aksi' => (int) ($row?->proses_aksi ?? 0),
         ];
@@ -115,19 +121,18 @@ class AdminDashboardController extends Controller
 
         if ($request->filled('status')) {
             $status = $request->query('status');
-            if (in_array($status, ['diajukan', 'menunggu', 'verifikasi'], true)) {
-                $query->whereIn('status', ['diajukan', 'menunggu']);
-            } elseif ($status === 'selesai_ditangani') {
-                $query->where('status', 'selesai')->where(function ($sq) {
-                    $sq->where('sub_status', 'selesai_ditangani')->orWhereNull('sub_status');
-                });
-            } elseif ($status === 'selesai_ditolak' || $status === 'ditolak') {
-                $query->where(function ($sq) {
-                    $sq->where(function ($s1) {
-                        $s1->where('status', 'selesai')->where('sub_status', 'selesai_ditolak');
-                    })->orWhere('status', 'ditolak');
-                });
-            } elseif (in_array($status, ['identifikasi', 'klarifikasi', 'rencana_aksi', 'aksi'], true)) {
+            if ($status === 'belum_verifikasi') {
+                $query->where('status', 'belum_verifikasi');
+            } elseif (in_array($status, ['diajukan', 'menunggu', 'verifikasi'], true)) {
+                $query->whereIn('status', ['diajukan', 'menunggu', 'verifikasi']);
+            } elseif ($status === 'selesai_setelah_tinjau_ulang') {
+                $query->where('status', 'selesai')->where('sub_status', 'selesai_setelah_tinjau_ulang');
+            } elseif (in_array($status, ['selesai', 'selesai_ditangani', 'selesai_ditolak', 'ditolak'], true)) {
+                $query->whereIn('status', ['selesai', 'ditolak']);
+            } elseif (in_array($status, ['identifikasi_klarifikasi', 'identifikasi', 'klarifikasi'], true)) {
+                $query->where('status', 'diproses')
+                    ->whereIn('sub_status', ['identifikasi_klarifikasi', 'identifikasi', 'klarifikasi']);
+            } elseif (in_array($status, ['rencana_aksi', 'aksi'], true)) {
                 $query->where('status', 'diproses')->where('sub_status', $status);
             } else {
                 $query->where('status', $status);
@@ -181,9 +186,46 @@ class AdminDashboardController extends Controller
 
     /**
      * Menampilkan detail lengkap laporan beserta tanggapan dan riwayat.
+     * Otomatis memverifikasi laporan jika status sebelumnya adalah 'belum_verifikasi'.
      */
-    public function laporanShow(Pengajuan $pengajuan): View
+    public function laporanShow(Request $request, Pengajuan $pengajuan): View
     {
+        $admin = $request->user();
+
+        // Otomatis ubah status dari belum_verifikasi ke verifikasi jika admin membuka detail laporan
+        if ($pengajuan->status === 'belum_verifikasi' && ! $request->boolean('keep_unverified')) {
+            DB::transaction(function () use ($pengajuan, $admin) {
+                $statusLama = $pengajuan->status;
+                $statusBaru = 'verifikasi';
+
+                $pengajuan->update([
+                    'status' => $statusBaru,
+                ]);
+
+                RiwayatStatus::create([
+                    'pengajuan_id' => $pengajuan->id,
+                    'diubah_oleh' => $admin->id,
+                    'status_sebelumnya' => $statusLama,
+                    'status_baru' => $statusBaru,
+                    'sub_status_sebelumnya' => $pengajuan->sub_status,
+                    'sub_status_baru' => null,
+                    'catatan' => 'Laporan telah dibuka dan diverifikasi oleh admin.',
+                ]);
+
+                if (! $pengajuan->is_anonim && $pengajuan->user_id) {
+                    Notifikasi::create([
+                        'user_id' => $pengajuan->user_id,
+                        'pengajuan_id' => $pengajuan->id,
+                        'judul' => 'Status Laporan Diperbarui',
+                        'pesan' => "Status laporan #{$pengajuan->id} telah diubah menjadi: Verifikasi",
+                        'tipe' => 'status_update',
+                    ]);
+                }
+            });
+
+            $pengajuan->refresh();
+        }
+
         $pengajuan->load([
             'kategori.parent',
             'user.unit',
@@ -273,42 +315,48 @@ class AdminDashboardController extends Controller
     public function updateStatus(Request $request, Pengajuan $pengajuan): RedirectResponse
     {
         $validated = $request->validate([
-            'status' => ['required', 'in:menunggu,diajukan,verifikasi,diproses,selesai,ditolak'],
-            'sub_status' => ['nullable', 'string', 'in:identifikasi,klarifikasi,rencana_aksi,aksi,selesai_ditangani,selesai_ditolak'],
+            'status' => ['required', 'in:belum_verifikasi,menunggu,diajukan,verifikasi,diproses,selesai,ditolak'],
+            'sub_status' => ['nullable', 'string', 'in:identifikasi_klarifikasi,identifikasi,klarifikasi,rencana_aksi,aksi,selesai,selesai_ditangani,selesai_ditolak,selesai_setelah_tinjau_ulang'],
             'catatan' => ['nullable', 'string', 'max:1000'],
         ], [
             'status.required' => 'Status baru wajib dipilih.',
             'status.in' => 'Status yang dipilih tidak valid.',
-            'sub_status.in' => 'Tahapan proses atau hasil akhir yang dipilih tidak valid.',
+            'sub_status.in' => 'Tahapan proses yang dipilih tidak valid.',
         ]);
 
         $statusInput = $validated['status'];
         $subStatusInput = $validated['sub_status'] ?? null;
 
+        $isDariTinjauUlang = ($pengajuan->jumlah_keberatan ?? 0) > 0
+            || $pengajuan->konfirmasi_pelapor === 'keberatan'
+            || $pengajuan->sub_status === 'selesai_setelah_tinjau_ulang';
+
         // Normalisasi status utama dan sub_status
-        if (in_array($statusInput, ['diajukan', 'verifikasi'], true)) {
-            $statusBaru = 'menunggu';
+        if ($statusInput === 'belum_verifikasi') {
+            $statusBaru = 'belum_verifikasi';
             $subStatusBaru = null;
-        } elseif ($statusInput === 'ditolak') {
-            // Jika ada pengiriman status 'ditolak' legacy, petakan ke selesai dengan sub_status selesai_ditolak
+        } elseif (in_array($statusInput, ['diajukan', 'verifikasi', 'menunggu'], true)) {
+            $statusBaru = 'verifikasi';
+            $subStatusBaru = null;
+        } elseif (in_array($statusInput, ['selesai', 'ditolak'], true)) {
             $statusBaru = 'selesai';
-            $subStatusBaru = 'selesai_ditolak';
+            $subStatusBaru = $isDariTinjauUlang ? 'selesai_setelah_tinjau_ulang' : null;
         } else {
             $statusBaru = $statusInput;
             if ($statusBaru === 'diproses') {
-                $subStatusBaru = in_array($subStatusInput, ['identifikasi', 'klarifikasi', 'rencana_aksi', 'aksi'], true)
-                    ? $subStatusInput
-                    : 'identifikasi';
-            } elseif ($statusBaru === 'selesai') {
-                $subStatusBaru = in_array($subStatusInput, ['selesai_ditangani', 'selesai_ditolak'], true)
-                    ? $subStatusInput
-                    : 'selesai_ditangani';
+                if (in_array($subStatusInput, ['identifikasi_klarifikasi', 'identifikasi', 'klarifikasi'], true)) {
+                    $subStatusBaru = 'identifikasi_klarifikasi';
+                } elseif (in_array($subStatusInput, ['rencana_aksi', 'aksi'], true)) {
+                    $subStatusBaru = $subStatusInput;
+                } else {
+                    $subStatusBaru = 'identifikasi_klarifikasi';
+                }
             } else {
                 $subStatusBaru = null;
             }
         }
 
-        $statusLama = in_array($pengajuan->status, ['diajukan', 'verifikasi'], true) ? 'menunggu' : $pengajuan->status;
+        $statusLama = $pengajuan->status;
         $subStatusLama = $pengajuan->sub_status;
         $catatan = $validated['catatan'] ?? null;
         $admin = $request->user();
@@ -318,9 +366,10 @@ class AdminDashboardController extends Controller
         }
 
         $labelStatus = match ($statusBaru) {
-            'menunggu' => 'Verifikasi',
-            'diproses' => 'Diproses ('.(Pengajuan::SUB_STATUS_PROSES[$subStatusBaru] ?? 'Identifikasi').')',
-            'selesai' => ($subStatusBaru === 'selesai_ditolak' ? 'Selesai Ditolak' : 'Selesai Ditangani'),
+            'belum_verifikasi' => 'Belum Diverifikasi',
+            'verifikasi', 'menunggu' => 'Verifikasi',
+            'diproses' => 'Diproses ('.(Pengajuan::SUB_STATUS_PROSES[$subStatusBaru] ?? 'Identifikasi / Klarifikasi').')',
+            'selesai' => $subStatusBaru === 'selesai_setelah_tinjau_ulang' ? 'Selesai setelah tinjau ulang' : 'Selesai',
             default => ucfirst($statusBaru),
         };
 
@@ -332,6 +381,13 @@ class AdminDashboardController extends Controller
 
             if ($statusBaru === 'selesai') {
                 $updateData['tanggal_selesai'] = now();
+                if ($subStatusBaru === 'selesai_setelah_tinjau_ulang') {
+                    $updateData['konfirmasi_pelapor'] = 'selesai_tinjau_ulang';
+                    $updateData['dikonfirmasi_pada'] = now();
+                } else {
+                    $updateData['konfirmasi_pelapor'] = null;
+                    $updateData['dikonfirmasi_pada'] = null;
+                }
             } else {
                 $updateData['tanggal_selesai'] = null;
             }
@@ -360,13 +416,95 @@ class AdminDashboardController extends Controller
             }
         });
 
+        if ($statusBaru === 'belum_verifikasi') {
+            return redirect()->route('admin.laporan.show', ['pengajuan' => $pengajuan, 'keep_unverified' => 1])
+                ->with('success', "Status laporan berhasil diperbarui menjadi: {$labelStatus}.");
+        }
+
         return back()->with('success', "Status laporan berhasil diperbarui menjadi: {$labelStatus}.");
     }
 
     /**
-     * Menampilkan halaman rekapitulasi dan laporan statistik.
+     * Menandai laporan kembali sebagai Belum Diverifikasi.
      */
-    public function rekap(Request $request): View
+    public function tandaiBelumVerifikasi(Request $request, Pengajuan $pengajuan): RedirectResponse
+    {
+        $admin = $request->user();
+
+        if ($pengajuan->status !== 'belum_verifikasi') {
+            $statusLama = $pengajuan->status;
+            $subStatusLama = $pengajuan->sub_status;
+
+            DB::transaction(function () use ($pengajuan, $admin, $statusLama, $subStatusLama) {
+                $pengajuan->update([
+                    'status' => 'belum_verifikasi',
+                    'sub_status' => null,
+                ]);
+
+                RiwayatStatus::create([
+                    'pengajuan_id' => $pengajuan->id,
+                    'diubah_oleh' => $admin->id,
+                    'status_sebelumnya' => $statusLama,
+                    'status_baru' => 'belum_verifikasi',
+                    'sub_status_sebelumnya' => $subStatusLama,
+                    'sub_status_baru' => null,
+                    'catatan' => 'Admin menandai kembali laporan sebagai Belum Diverifikasi.',
+                ]);
+            });
+        }
+
+        return redirect()->route('admin.laporan.show', ['pengajuan' => $pengajuan, 'keep_unverified' => 1])
+            ->with('success', "Status laporan #{$pengajuan->id} berhasil diubah kembali ke Belum Diverifikasi.");
+    }
+
+    /**
+     * Menandai laporan sebagai Verifikasi secara manual.
+     */
+    public function verifikasi(Request $request, Pengajuan $pengajuan): RedirectResponse
+    {
+        $admin = $request->user();
+
+        if ($pengajuan->status !== 'verifikasi') {
+            $statusLama = $pengajuan->status;
+            $subStatusLama = $pengajuan->sub_status;
+
+            DB::transaction(function () use ($pengajuan, $admin, $statusLama, $subStatusLama) {
+                $pengajuan->update([
+                    'status' => 'verifikasi',
+                    'sub_status' => null,
+                ]);
+
+                RiwayatStatus::create([
+                    'pengajuan_id' => $pengajuan->id,
+                    'diubah_oleh' => $admin->id,
+                    'status_sebelumnya' => $statusLama,
+                    'status_baru' => 'verifikasi',
+                    'sub_status_sebelumnya' => $subStatusLama,
+                    'sub_status_baru' => null,
+                    'catatan' => 'Admin memverifikasi laporan.',
+                ]);
+
+                if (! $pengajuan->is_anonim && $pengajuan->user_id) {
+                    Notifikasi::create([
+                        'user_id' => $pengajuan->user_id,
+                        'pengajuan_id' => $pengajuan->id,
+                        'judul' => 'Status Laporan Diperbarui',
+                        'pesan' => "Status laporan #{$pengajuan->id} telah diubah menjadi: Verifikasi",
+                        'tipe' => 'status_update',
+                    ]);
+                }
+            });
+        }
+
+        return back()->with('success', "Status laporan #{$pengajuan->id} berhasil diubah menjadi: Verifikasi.");
+    }
+
+    /**
+     * Mengambil dan memfilter data rekapitulasi pengaduan.
+     *
+     * @return array{laporan: Collection, ringkasan: array<string, int>, kategoris: Collection, filter: array<string, mixed>}
+     */
+    protected function getRekapData(Request $request): array
     {
         $kategoris = Kategori::with('parent')->orderBy('nama_kategori')->get();
         $query = Pengajuan::with(['kategori.parent', 'user.unit']);
@@ -385,19 +523,18 @@ class AdminDashboardController extends Controller
 
         if ($request->filled('status')) {
             $status = $request->query('status');
-            if (in_array($status, ['diajukan', 'menunggu', 'verifikasi'], true)) {
-                $query->whereIn('status', ['diajukan', 'menunggu']);
-            } elseif ($status === 'selesai_ditangani') {
-                $query->where('status', 'selesai')->where(function ($sq) {
-                    $sq->where('sub_status', 'selesai_ditangani')->orWhereNull('sub_status');
-                });
-            } elseif ($status === 'selesai_ditolak' || $status === 'ditolak') {
-                $query->where(function ($sq) {
-                    $sq->where(function ($s1) {
-                        $s1->where('status', 'selesai')->where('sub_status', 'selesai_ditolak');
-                    })->orWhere('status', 'ditolak');
-                });
-            } elseif (in_array($status, ['identifikasi', 'klarifikasi', 'rencana_aksi', 'aksi'], true)) {
+            if ($status === 'belum_verifikasi') {
+                $query->where('status', 'belum_verifikasi');
+            } elseif (in_array($status, ['diajukan', 'menunggu', 'verifikasi'], true)) {
+                $query->whereIn('status', ['diajukan', 'menunggu', 'verifikasi']);
+            } elseif ($status === 'selesai_setelah_tinjau_ulang') {
+                $query->where('status', 'selesai')->where('sub_status', 'selesai_setelah_tinjau_ulang');
+            } elseif (in_array($status, ['selesai', 'selesai_ditangani', 'selesai_ditolak', 'ditolak'], true)) {
+                $query->whereIn('status', ['selesai', 'ditolak']);
+            } elseif (in_array($status, ['identifikasi_klarifikasi', 'identifikasi', 'klarifikasi'], true)) {
+                $query->where('status', 'diproses')
+                    ->whereIn('sub_status', ['identifikasi_klarifikasi', 'identifikasi', 'klarifikasi']);
+            } elseif (in_array($status, ['rencana_aksi', 'aksi'], true)) {
                 $query->where('status', 'diproses')->where('sub_status', $status);
             } else {
                 $query->where('status', $status);
@@ -410,32 +547,72 @@ class AdminDashboardController extends Controller
 
         $laporan = $query->latest()->get();
 
-        $selesaiDitolak = $laporan->filter(function ($l) {
-            return ($l->status === 'selesai' && $l->sub_status === 'selesai_ditolak') || $l->status === 'ditolak';
-        })->count();
-
-        $selesaiDitangani = $laporan->filter(function ($l) {
-            return $l->status === 'selesai' && ($l->sub_status === 'selesai_ditangani' || $l->sub_status === null);
-        })->count();
+        $selesaiTotal = $laporan->whereIn('status', ['selesai', 'ditolak'])->count();
 
         $ringkasan = [
             'total' => $laporan->count(),
-            'diajukan' => $laporan->whereIn('status', ['diajukan', 'menunggu'])->count(),
-            'verifikasi' => $laporan->whereIn('status', ['diajukan', 'menunggu'])->count(),
+            'belum_verifikasi' => $laporan->where('status', 'belum_verifikasi')->count(),
+            'diajukan' => $laporan->whereIn('status', ['belum_verifikasi', 'diajukan', 'menunggu', 'verifikasi'])->count(),
+            'verifikasi' => $laporan->whereIn('status', ['diajukan', 'menunggu', 'verifikasi'])->count(),
             'diproses' => $laporan->where('status', 'diproses')->count(),
-            'selesai' => $laporan->where('status', 'selesai')->count(),
-            'selesai_ditangani' => $selesaiDitangani,
-            'selesai_ditolak' => $selesaiDitolak,
-            'ditolak' => $selesaiDitolak,
+            'selesai' => $selesaiTotal,
+            'selesai_ditangani' => $selesaiTotal,
+            'selesai_ditolak' => 0,
+            'ditolak' => 0,
             'anonim' => $laporan->where('is_anonim', true)->count(),
             'identitas' => $laporan->where('is_anonim', false)->count(),
         ];
 
-        return view('admin.rekap', [
+        return [
             'laporan' => $laporan,
             'ringkasan' => $ringkasan,
             'kategoris' => $kategoris,
             'filter' => $request->all(),
+        ];
+    }
+
+    /**
+     * Menampilkan halaman rekapitulasi dan laporan statistik.
+     */
+    public function rekap(Request $request): View
+    {
+        return view('admin.rekap', $this->getRekapData($request));
+    }
+
+    /**
+     * Mencetak laporan rekapitulasi ke format PDF menggunakan mPDF.
+     */
+    public function rekapPdf(Request $request, PdfService $pdfService): Response
+    {
+        $data = $this->getRekapData($request);
+        $html = view('admin.rekap_pdf', $data)->render();
+        $filename = 'rekap_laporan_komplain_'.date('Ymd_His').'.pdf';
+
+        return $pdfService->render($html, $filename, 'L', 'A4');
+    }
+
+    /**
+     * Mencetak lembar detail pengaduan ke format PDF menggunakan mPDF.
+     */
+    public function laporanPdf(Pengajuan $pengajuan, PdfService $pdfService): Response
+    {
+        $pengajuan->load([
+            'kategori.parent',
+            'user.unit',
+            'lampirans',
+            'riwayatStatuses.user',
+            'tanggapans.user',
         ]);
+
+        $isAnonimUnlocked = (bool) session('unlocked_anonim_'.$pengajuan->id, false);
+
+        $html = view('admin.laporan_pdf', [
+            'pengajuan' => $pengajuan,
+            'isAnonimUnlocked' => $isAnonimUnlocked,
+        ])->render();
+
+        $filename = 'lembar_pengaduan_'.$pengajuan->id.'_'.date('Ymd_His').'.pdf';
+
+        return $pdfService->render($html, $filename, 'P', 'A4');
     }
 }

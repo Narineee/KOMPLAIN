@@ -17,8 +17,8 @@ class AuthTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertSee('Masuk ke Sistem');
-        $response->assertSee('Pengadu / Pelapor');
-        $response->assertSee('Administrator');
+        $response->assertSee('KOMPLAIN');
+        $response->assertSee('ilustrasi-login.png');
     }
 
     public function test_login_page_renders_with_default_role_query(): void
@@ -83,42 +83,39 @@ class AuthTest extends TestCase
         $this->assertAuthenticatedAs($admin);
     }
 
-    public function test_user_cannot_login_with_mismatched_admin_tab(): void
+    public function test_both_pegawai_and_admin_can_login_through_unified_form(): void
     {
-        User::factory()->create([
+        $pegawai = User::factory()->create([
             'email' => 'pengadu@komplain.test',
             'password' => Hash::make('secret123'),
             'role' => 'pegawai',
             'is_aktif' => true,
         ]);
 
-        $response = $this->post('/login', [
+        $responsePegawai = $this->post('/login', [
             'login' => 'pengadu@komplain.test',
             'password' => 'secret123',
-            'role_target' => 'admin',
         ]);
 
-        $response->assertSessionHasErrors('login');
-        $this->assertGuest();
-    }
+        $responsePegawai->assertRedirect(route('pegawai.dashboard'));
+        $this->assertAuthenticatedAs($pegawai);
 
-    public function test_admin_cannot_login_with_mismatched_pengadu_tab(): void
-    {
-        User::factory()->create([
-            'email' => 'admin@komplain.test',
+        auth()->logout();
+
+        $admin = User::factory()->create([
+            'email' => 'admin_baru@komplain.test',
             'password' => Hash::make('secret123'),
             'role' => 'admin',
             'is_aktif' => true,
         ]);
 
-        $response = $this->post('/login', [
-            'login' => 'admin@komplain.test',
+        $responseAdmin = $this->post('/login', [
+            'login' => 'admin_baru@komplain.test',
             'password' => 'secret123',
-            'role_target' => 'pengadu',
         ]);
 
-        $response->assertSessionHasErrors('login');
-        $this->assertGuest();
+        $responseAdmin->assertRedirect(route('admin.dashboard'));
+        $this->assertAuthenticatedAs($admin);
     }
 
     public function test_inactive_user_cannot_login(): void

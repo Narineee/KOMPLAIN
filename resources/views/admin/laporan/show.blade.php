@@ -129,14 +129,56 @@
                             <span class="text-xs font-semibold uppercase tracking-wider text-slate-400 block">ID Pengaduan</span>
                             <span class="font-mono text-xl font-bold text-indigo-700">#{{ $pengajuan->id }}</span>
                         </div>
-                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold
-                            @if(in_array($pengajuan->status, ['menunggu', 'diajukan'])) bg-amber-100 text-amber-800
-                            @elseif($pengajuan->status === 'diproses') bg-blue-100 text-blue-800
-                            @elseif($pengajuan->status === 'selesai' && $pengajuan->sub_status === 'selesai_ditolak') bg-rose-100 text-rose-800
-                            @elseif($pengajuan->status === 'selesai') bg-emerald-100 text-emerald-800
-                            @else bg-slate-100 text-slate-800 @endif">
-                            Status: {{ $pengajuan->status_label }}
-                        </span>
+                        <div class="flex items-center flex-wrap gap-2">
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold
+                                @if($pengajuan->status === 'belum_verifikasi') bg-rose-100 text-rose-800 border border-rose-200/60
+                                @elseif(in_array($pengajuan->status, ['menunggu', 'diajukan', 'verifikasi'])) bg-amber-100 text-amber-800
+                                @elseif($pengajuan->status === 'diproses') bg-blue-100 text-blue-800
+                                @elseif($pengajuan->status === 'selesai') bg-emerald-100 text-emerald-800
+                                @else bg-slate-100 text-slate-800 @endif">
+                                @if($pengajuan->status === 'belum_verifikasi')
+                                    <span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse mr-1.5"></span>
+                                @endif
+                                Status: {{ $pengajuan->status_label }}
+                            </span>
+
+                            @if ($pengajuan->status === 'verifikasi' || in_array($pengajuan->status, ['menunggu', 'diajukan']))
+                                <form action="{{ route('admin.laporan.tandai-belum-verifikasi', $pengajuan) }}" method="POST" class="inline">
+                                    @csrf
+                                    @method('PATCH')
+                                    <button type="submit"
+                                            title="Tandai kembali sebagai Belum Diverifikasi"
+                                            onclick="return confirm('Apakah Anda yakin ingin mengembalikan status laporan ini menjadi Belum Diverifikasi?');"
+                                            class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition shadow-2xs">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                        </svg>
+                                        Tandai Belum Diverifikasi
+                                    </button>
+                                </form>
+                            @elseif ($pengajuan->status === 'belum_verifikasi')
+                                <form action="{{ route('admin.laporan.verifikasi', $pengajuan) }}" method="POST" class="inline">
+                                    @csrf
+                                    @method('PATCH')
+                                    <button type="submit"
+                                            class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-500 hover:bg-amber-600 text-white transition shadow-2xs">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                        Verifikasi Sekarang
+                                    </button>
+                                </form>
+                            @endif
+
+                            <a href="{{ route('admin.laporan.pdf', $pengajuan) }}"
+                               target="_blank"
+                               class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white transition shadow-sm">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                Cetak PDF
+                            </a>
+                        </div>
                     </div>
 
                     <div class="mb-3">
@@ -254,6 +296,12 @@
                         @csrf
                         @method('PATCH')
 
+                        @if ($pengajuan->konfirmasi_pelapor === 'keberatan' || ($pengajuan->jumlah_keberatan ?? 0) > 0)
+                            <div class="p-2.5 rounded-xl bg-purple-50 border border-purple-200 text-[11px] text-purple-900 leading-relaxed">
+                                <strong>Catatan Peninjauan Ulang:</strong> Aduan ini memiliki riwayat keberatan pelapor. Jika diubah ke status <em>Selesai</em>, laporan akan otomatis berstatus <strong>Selesai setelah tinjau ulang</strong> (maksimal 1x keberatan).
+                            </div>
+                        @endif
+
                         <div>
                             <label class="block text-xs font-semibold text-slate-700 mb-1">Status Utama <span class="text-rose-500">*</span></label>
                             <select id="select-status-utama"
@@ -261,9 +309,12 @@
                                     required
                                     onchange="handleStatusUtamaChange()"
                                     class="w-full text-xs rounded-xl border border-slate-300 p-2.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium">
-                                <option value="verifikasi" {{ in_array($pengajuan->status, ['menunggu', 'diajukan']) ? 'selected' : '' }}>Verifikasi (Tahap Awal)</option>
+                                <option value="belum_verifikasi" {{ $pengajuan->status === 'belum_verifikasi' ? 'selected' : '' }}>Belum Diverifikasi</option>
+                                <option value="verifikasi" {{ in_array($pengajuan->status, ['menunggu', 'diajukan', 'verifikasi']) ? 'selected' : '' }}>Verifikasi (Tahap Awal)</option>
                                 <option value="diproses" {{ $pengajuan->status === 'diproses' ? 'selected' : '' }}>Sedang Diproses (Tindak Lanjut)</option>
-                                <option value="selesai" {{ $pengajuan->status === 'selesai' ? 'selected' : '' }}>Selesai Penanganan</option>
+                                <option value="selesai" {{ $pengajuan->status === 'selesai' ? 'selected' : '' }}>
+                                    {{ ($pengajuan->konfirmasi_pelapor === 'keberatan' || ($pengajuan->jumlah_keberatan ?? 0) > 0 || $pengajuan->sub_status === 'selesai_setelah_tinjau_ulang') ? 'Selesai setelah tinjau ulang' : 'Selesai Penanganan' }}
+                                </option>
                             </select>
                         </div>
 
@@ -273,29 +324,13 @@
                                 <span class="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
                                 Tahap Sub-Proses <span class="text-rose-500">*</span>
                             </label>
-                            <p class="text-[11px] text-blue-700 mb-2">Tentukan tahapan penanganan saat ini agar transparan bagi pengaju:</p>
+                            <p class="text-[11px] text-blue-700 mb-2">Tentukan tahapan penanganan saat ini agar transparan bagi pelapor:</p>
                             <select id="select-sub-proses"
                                     name="sub_status_proses"
                                     class="w-full text-xs rounded-lg border border-blue-300 p-2 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/30">
-                                <option value="identifikasi" {{ ($pengajuan->sub_status ?? 'identifikasi') === 'identifikasi' ? 'selected' : '' }}>Identifikasi</option>
-                                <option value="klarifikasi" {{ $pengajuan->sub_status === 'klarifikasi' ? 'selected' : '' }}>Klarifikasi</option>
+                                <option value="identifikasi_klarifikasi" {{ in_array($pengajuan->sub_status ?? 'identifikasi_klarifikasi', ['identifikasi_klarifikasi', 'identifikasi', 'klarifikasi']) ? 'selected' : '' }}>Identifikasi / Klarifikasi</option>
                                 <option value="rencana_aksi" {{ $pengajuan->sub_status === 'rencana_aksi' ? 'selected' : '' }}>Rencana Aksi</option>
                                 <option value="aksi" {{ $pengajuan->sub_status === 'aksi' ? 'selected' : '' }}>Aksi</option>
-                            </select>
-                        </div>
-
-                        <!-- Sub-Status Pilihan Ketika Status == Selesai -->
-                        <div id="wrapper-sub-selesai" class="{{ $pengajuan->status === 'selesai' ? '' : 'hidden' }} p-3 rounded-xl bg-emerald-50/70 border border-emerald-200">
-                            <label class="block text-xs font-bold text-emerald-900 mb-1 flex items-center gap-1.5">
-                                <span class="w-2 h-2 rounded-full bg-emerald-600"></span>
-                                Hasil Akhir Penanganan <span class="text-rose-500">*</span>
-                            </label>
-                            <p class="text-[11px] text-emerald-700 mb-2">Hasil keputusan setelah seluruh proses dilakukan:</p>
-                            <select id="select-sub-selesai"
-                                    name="sub_status_selesai"
-                                    class="w-full text-xs rounded-lg border border-emerald-300 p-2 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/30">
-                                <option value="selesai_ditangani" {{ ($pengajuan->sub_status ?? 'selesai_ditangani') === 'selesai_ditangani' ? 'selected' : '' }}>✅ Selesai (Ditangani)</option>
-                                <option value="selesai_ditolak" {{ $pengajuan->sub_status === 'selesai_ditolak' ? 'selected' : '' }}>❌ Selesai (Ditolak)</option>
                             </select>
                         </div>
 
@@ -431,8 +466,7 @@
                             @foreach ($pengajuan->riwayatStatuses as $riw)
                                 <div class="relative text-xs">
                                     <div class="absolute -left-6 top-1 w-2.5 h-2.5 rounded-full
-                                        @if($riw->status_baru === 'selesai' && $riw->sub_status_baru === 'selesai_ditolak') bg-rose-500
-                                        @elseif($riw->status_baru === 'selesai') bg-emerald-500
+                                        @if($riw->status_baru === 'selesai') bg-emerald-500
                                         @elseif($riw->status_baru === 'diproses') bg-blue-500
                                         @else bg-amber-500 @endif ring-4 ring-white"></div>
                                     <span class="font-bold text-slate-900 block">
@@ -548,20 +582,14 @@
         function handleStatusUtamaChange() {
             const statusSelect = document.getElementById('select-status-utama');
             const wrapperProses = document.getElementById('wrapper-sub-proses');
-            const wrapperSelesai = document.getElementById('wrapper-sub-selesai');
 
-            if (!statusSelect || !wrapperProses || !wrapperSelesai) return;
+            if (!statusSelect || !wrapperProses) return;
 
             const val = statusSelect.value;
             if (val === 'diproses') {
                 wrapperProses.classList.remove('hidden');
-                wrapperSelesai.classList.add('hidden');
-            } else if (val === 'selesai') {
-                wrapperProses.classList.add('hidden');
-                wrapperSelesai.classList.remove('hidden');
             } else {
                 wrapperProses.classList.add('hidden');
-                wrapperSelesai.classList.add('hidden');
             }
         }
 
@@ -569,15 +597,12 @@
             const statusSelect = document.getElementById('select-status-utama');
             const hiddenSubStatus = document.getElementById('input-sub-status');
             const selectProses = document.getElementById('select-sub-proses');
-            const selectSelesai = document.getElementById('select-sub-selesai');
 
             if (!statusSelect || !hiddenSubStatus) return;
 
             const val = statusSelect.value;
             if (val === 'diproses') {
-                hiddenSubStatus.value = selectProses ? selectProses.value : 'identifikasi';
-            } else if (val === 'selesai') {
-                hiddenSubStatus.value = selectSelesai ? selectSelesai.value : 'selesai_ditangani';
+                hiddenSubStatus.value = selectProses ? selectProses.value : 'identifikasi_klarifikasi';
             } else {
                 hiddenSubStatus.value = '';
             }

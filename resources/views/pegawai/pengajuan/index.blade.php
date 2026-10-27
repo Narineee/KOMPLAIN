@@ -1,158 +1,96 @@
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="h-full bg-slate-50">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Portal Pengadu - KOMPLAIN</title>
+@extends('layouts.pengadu')
 
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700" rel="stylesheet" />
+@section('title', 'Riwayat pengaduan')
 
-    <!-- Scripts & Styles via Vite -->
-    @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
-    @else
-        <script src="https://cdn.tailwindcss.com"></script>
-    @endif
-</head>
-<body class="min-h-full flex flex-col text-slate-800 antialiased selection:bg-blue-500 selection:text-white">
-    <!-- Navbar Pengadu -->
-    <nav class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16">
-                <div class="flex items-center gap-3">
-                    <a href="{{ route('pegawai.dashboard') }}" class="flex items-center gap-2">
-                        <div class="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-lg text-white">
-                            K
-                        </div>
-                        <div>
-                            <span class="font-bold text-base leading-tight block text-slate-900">KOMPLAIN</span>
-                            <span class="text-[10px] text-blue-600 block font-semibold uppercase tracking-wider">Portal Pengadu</span>
-                        </div>
-                    </a>
+@section('content')
+    @php
+        $adaFilter = $q !== '' || $status !== '' || $tahunAktif !== (string) now()->year;
+    @endphp
 
-                    <div class="hidden sm:flex items-center gap-2 ml-6">
-                        <a href="{{ route('pegawai.dashboard') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700">
-                            Daftar Aduan Saya
-                        </a>
-                        <a href="{{ route('pegawai.pengajuan.create') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
-                            + Buat Pengaduan Baru
-                        </a>
-                    </div>
-                </div>
+    <h1 class="text-[28px] font-bold leading-tight tracking-tight text-slate-900">Riwayat pengaduan</h1>
+    <p class="mt-2 text-[15px] text-slate-500">Pantau setiap proses, dari dikirim hingga tuntas.</p>
 
-                <div class="flex items-center gap-4">
-                    <div class="text-right hidden sm:block">
-                        <span class="block text-xs font-semibold text-slate-800">{{ auth()->user()->name }}</span>
-                        <span class="block text-[10px] text-slate-500">Pengadu / Pegawai (NIP: {{ auth()->user()->nip ?? '-' }})</span>
-                    </div>
-
-                    <form action="{{ route('logout') }}" method="POST" class="inline">
-                        @csrf
-                        <button type="submit" class="py-1.5 px-3 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-700 transition">
-                            Keluar
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </nav>
-
-    <!-- Main Content -->
-    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        @if (session('status'))
-            <div class="mb-6 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-sm text-emerald-800 flex items-center gap-2 shadow-sm">
-                <svg class="w-5 h-5 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+    <!-- Pencarian & filter -->
+    <form method="GET" action="{{ route('pegawai.pengajuan.index') }}" class="mt-5 space-y-4">
+        <div class="relative flex items-center">
+            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
                 </svg>
-                <span>{{ session('status') }}</span>
             </div>
-        @endif
-
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-            <div>
-                <h1 class="text-2xl font-bold text-slate-900">Histori Pengaduan Saya</h1>
-                <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Daftar laporan yang Anda ajukan dengan identitas terdaftar.</p>
-            </div>
-            <div>
-                <a href="{{ route('pegawai.pengajuan.create') }}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-sm shadow-blue-500/20 transition">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                    </svg>
-                    Ajukan Aduan Baru
-                </a>
-            </div>
+            <label for="q" class="sr-only">Cari pengaduan</label>
+            <input type="text" id="q" name="q" value="{{ $q }}" placeholder="Cari nomor atau judul aduan..."
+                   class="block w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-11 pr-4 text-sm text-slate-800 placeholder-slate-400 shadow-xs focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20">
         </div>
 
-        <!-- Table Complaints -->
-        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-xs sm:text-sm">
-                    <thead class="bg-slate-50/70 border-b border-slate-200 text-slate-600 uppercase font-semibold text-[11px] tracking-wider">
-                        <tr>
-                            <th class="py-3 px-4">ID</th>
-                            <th class="py-3 px-4">Uraian Pengaduan</th>
-                            <th class="py-3 px-4">Klasifikasi</th>
-                            <th class="py-3 px-4">Tanggal Pengajuan</th>
-                            <th class="py-3 px-4">Status</th>
-                            <th class="py-3 px-4 text-right">Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-100 text-slate-700">
-                        @forelse ($pengajuans as $lap)
-                            <tr class="hover:bg-slate-50/50 transition">
-                                <td class="py-3.5 px-4 font-mono font-medium text-slate-900">#{{ $lap->id }}</td>
-                                <td class="py-3.5 px-4 max-w-xs text-slate-900 font-medium">
-                                    {{ Str::limit($lap->deskripsi ?? $lap->isi_laporan, 50) }}
-                                </td>
-                                <td class="py-3.5 px-4">
-                                    <span class="font-medium text-slate-900 block">{{ $lap->kategori->nama_kategori ?? '-' }}</span>
-                                    @if ($lap->kategori?->parent)
-                                        <span class="text-[11px] text-slate-500 block">Sub dari: {{ $lap->kategori->parent->nama_kategori }}</span>
-                                    @endif
-                                </td>
-                                <td class="py-3.5 px-4 text-slate-500">{{ $lap->created_at->format('d M Y, H:i') }}</td>
-                                <td class="py-3.5 px-4">
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold
-                                        @if(in_array($lap->status, ['diajukan', 'menunggu'])) bg-amber-100 text-amber-800
-                                        @elseif($lap->status === 'diproses') bg-blue-100 text-blue-800
-                                        @elseif($lap->status === 'selesai' && $lap->sub_status === 'selesai_ditolak') bg-rose-100 text-rose-800
-                                        @elseif($lap->status === 'selesai') bg-emerald-100 text-emerald-800
-                                        @else bg-slate-100 text-slate-800 @endif">
-                                        {{ $lap->status_label }}
-                                    </span>
-                                </td>
-                                <td class="py-3.5 px-4 text-right">
-                                    <a href="{{ route('pegawai.pengajuan.show', $lap) }}" class="text-xs font-semibold text-blue-600 hover:text-blue-800 hover:underline">
-                                        Detail →
-                                    </a>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="6" class="py-12 text-center text-slate-400">
-                                    <svg class="w-10 h-10 mx-auto text-slate-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                    </svg>
-                                    Anda belum pernah mengajukan pengaduan.
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-
-            @if($pengajuans->hasPages())
-                <div class="p-4 border-t border-slate-100">
-                    {{ $pengajuans->links() }}
+        <div class="grid grid-cols-2 gap-3 md:max-w-xl">
+            <div>
+                <label for="status" class="block text-sm font-bold text-slate-900">Status</label>
+                <div class="relative mt-2 flex items-center">
+                    <select id="status" name="status" onchange="this.form.submit()"
+                            class="block w-full appearance-none rounded-xl border border-slate-300 bg-white py-2.5 pl-3.5 pr-10 text-sm text-slate-800 shadow-xs focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20">
+                        <option value="">Semua status</option>
+                        @foreach ($opsiStatus as $nilai => $label)
+                            <option value="{{ $nilai }}" @selected($status === $nilai)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </div>
                 </div>
-            @endif
-        </div>
-    </main>
+            </div>
 
-    <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-400 mt-10">
-        Portal Pengadu KOMPLAIN &copy; {{ date('Y') }}
-    </footer>
-</body>
-</html>
+            <div>
+                <label for="tahun" class="block text-sm font-bold text-slate-900">Periode</label>
+                <div class="relative mt-2 flex items-center">
+                    <select id="tahun" name="tahun" onchange="this.form.submit()"
+                            class="block w-full appearance-none rounded-xl border border-slate-300 bg-white py-2.5 pl-3.5 pr-10 text-sm text-slate-800 shadow-xs focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20">
+                        @foreach ($daftarTahun as $th)
+                            <option value="{{ $th }}" @selected($tahunAktif === (string) $th)>Tahun {{ $th }}</option>
+                        @endforeach
+                        <option value="semua" @selected($tahunAktif === 'semua')>Semua tahun</option>
+                    </select>
+                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <button type="submit" class="sr-only">Terapkan filter</button>
+    </form>
+
+    <!-- Jumlah hasil -->
+    <div class="mt-4 flex items-center justify-between text-xs font-semibold text-slate-500">
+        <p>{{ $pengajuans->total() }} pengaduan · Terbaru lebih dulu</p>
+        @if ($adaFilter)
+            <a href="{{ route('pegawai.pengajuan.index') }}" class="text-blue-600 hover:text-blue-700">Atur ulang</a>
+        @endif
+    </div>
+
+    <!-- Daftar -->
+    <div class="mt-3 grid gap-3 md:grid-cols-2">
+        @forelse ($pengajuans as $p)
+            <x-pengadu.kartu-aduan :pengajuan="$p" />
+        @empty
+            <div class="md:col-span-2 rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center">
+                <p class="text-sm font-semibold text-slate-800">
+                    {{ $adaFilter ? 'Tidak ada pengaduan yang cocok' : 'Belum ada pengaduan' }}
+                </p>
+                <p class="mt-1 text-sm text-slate-500">
+                    {{ $adaFilter ? 'Ubah kata kunci, status, atau periode.' : 'Aduan yang Anda kirim akan muncul di sini.' }}
+                </p>
+            </div>
+        @endforelse
+    </div>
+
+    @if ($pengajuans->hasPages())
+        <div class="mt-6">
+            {{ $pengajuans->links() }}
+        </div>
+    @endif
+@endsection

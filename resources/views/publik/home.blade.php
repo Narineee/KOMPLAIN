@@ -33,10 +33,6 @@
                     </div>
                 </a>
 
-                <div class="flex items-center gap-3">
-                    <a href="{{ route('cek-pengajuan.index') }}" class="text-sm font-medium text-slate-600 hover:text-slate-900 px-3 py-2 rounded-lg hover:bg-slate-100 transition hidden sm:inline-block">
-                        Cek Status Laporan
-                    </a>
 
                     @auth
                         @if (auth()->user()->role === 'admin')
@@ -56,12 +52,8 @@
                             </button>
                         </form>
                     @else
-                        <a href="{{ route('login', ['role' => 'pengadu']) }}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 transition">
-                            Login Pengadu
-                        </a>
-
-                        <a href="{{ route('login', ['role' => 'admin']) }}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm transition">
-                            Login Admin
+                        <a href="{{ route('login') }}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition">
+                            Masuk ke Sistem
                         </a>
                     @endauth
                 </div>
@@ -91,36 +83,20 @@
             </p>
 
             <!-- Action Cards -->
-            <div class="mt-10 grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto text-left">
-                <!-- Portal Pengadu -->
-                <div class="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-sm hover:shadow-md transition">
-                    <div class="w-12 h-12 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center mb-4">
+            <div class="mt-10 max-w-md mx-auto text-left">
+                <!-- Masuk ke Sistem (Login Terpadu) -->
+                <div class="bg-white rounded-2xl p-6 sm:p-8 border border-blue-100 shadow-sm hover:shadow-md transition group">
+                    <div class="w-12 h-12 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center mb-4 group-hover:scale-105 transition">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
                         </svg>
                     </div>
-                    <h2 class="text-xl font-bold text-slate-900 mb-2">Portal Pengadu / Pelapor</h2>
+                    <h2 class="text-xl font-bold text-slate-900 mb-2">Masuk ke Sistem</h2>
                     <p class="text-sm text-slate-600 mb-6">
-                        Buat pengaduan baru, unggah lampiran bukti, pantau tahapan proses laporan, dan terima tanggapan resmi.
+                        Pintu masuk resmi untuk Pengadu / Pegawai dan Administrator guna menyampaikan aduan, memproses laporan, dan memberikan tanggapan resmi.
                     </p>
-                    <a href="{{ route('login', ['role' => 'pengadu']) }}" class="inline-flex items-center justify-center w-full py-2.5 px-4 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 transition">
-                        Masuk sebagai Pengadu →
-                    </a>
-                </div>
-
-                <!-- Portal Admin -->
-                <div class="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-sm hover:shadow-md transition">
-                    <div class="w-12 h-12 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center mb-4">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                        </svg>
-                    </div>
-                    <h2 class="text-xl font-bold text-slate-900 mb-2">Portal Administrator</h2>
-                    <p class="text-sm text-slate-600 mb-6">
-                        Verifikasi keabsahan laporan, perbarui status penanganan, berikan tanggapan, dan unduh laporan rekapitulasi.
-                    </p>
-                    <a href="{{ route('login', ['role' => 'admin']) }}" class="inline-flex items-center justify-center w-full py-2.5 px-4 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition">
-                        Masuk sebagai Administrator →
+                    <a href="{{ route('login') }}" class="inline-flex items-center justify-center w-full py-2.5 px-4 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 transition shadow-sm">
+                        Masuk ke Akun Anda →
                     </a>
                 </div>
             </div>
@@ -137,7 +113,7 @@
                 </div>
                 <div class="bg-white p-4 sm:p-6 rounded-2xl border border-slate-100 text-center">
                     <div class="text-2xl sm:text-4xl font-extrabold text-emerald-600">{{ $statistik['selesai'] ?? 0 }}</div>
-                    <div class="mt-1 text-xs sm:text-sm font-medium text-slate-500">Selesai Ditangani</div>
+                    <div class="mt-1 text-xs sm:text-sm font-medium text-slate-500">Selesai</div>
                 </div>
             </div>
         </section>

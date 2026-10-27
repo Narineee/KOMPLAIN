@@ -1,408 +1,344 @@
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="h-full bg-slate-50">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Buat Pengaduan Baru - KOMPLAIN</title>
+@extends('layouts.pengadu')
 
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700" rel="stylesheet" />
+@section('title', 'Pengaduan baru')
+@section('back_url', route('pegawai.dashboard'))
+@section('back_title', 'Pengaduan baru')
 
-    <!-- Scripts & Styles via Vite -->
-    @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
-    @else
-        <script src="https://cdn.tailwindcss.com"></script>
-    @endif
-</head>
-<body class="min-h-full flex flex-col text-slate-800 antialiased selection:bg-blue-500 selection:text-white">
-    <!-- Navbar Pengadu -->
-    <nav class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16">
-                <div class="flex items-center gap-3">
-                    <a href="{{ route('pegawai.dashboard') }}" class="flex items-center gap-2">
-                        <div class="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-lg text-white">
-                            K
-                        </div>
-                        <div>
-                            <span class="font-bold text-base leading-tight block text-slate-900">KOMPLAIN</span>
-                            <span class="text-[10px] text-blue-600 block font-semibold uppercase tracking-wider">Portal Pengadu</span>
-                        </div>
-                    </a>
+@section('content')
+<div class="max-w-2xl mx-auto">
 
-                    <div class="hidden sm:flex items-center gap-2 ml-6">
-                        <a href="{{ route('pegawai.dashboard') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
-                            Daftar Aduan Saya
-                        </a>
-                        <a href="{{ route('pegawai.pengajuan.create') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700">
-                            + Buat Pengaduan Baru
-                        </a>
-                    </div>
-                </div>
+    <h1 class="text-[28px] font-bold leading-tight tracking-tight text-slate-900">Sampaikan aduan Anda</h1>
+    <p class="mt-2 text-[15px] leading-relaxed text-slate-500">
+        Ceritakan kendala secara jelas agar kami dapat membantu dengan tepat.
+    </p>
 
-                <div class="flex items-center gap-4">
-                    <div class="text-right hidden sm:block">
-                        <span class="block text-xs font-semibold text-slate-800">{{ auth()->user()->name }}</span>
-                        <span class="block text-[10px] text-slate-500">Pengadu / Pegawai (NIP: {{ auth()->user()->nip ?? '-' }})</span>
-                    </div>
-
-                    <form action="{{ route('logout') }}" method="POST" class="inline">
-                        @csrf
-                        <button type="submit" class="py-1.5 px-3 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-700 transition">
-                            Keluar
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </nav>
-
-    <!-- Main Content -->
-    <main class="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <!-- Breadcrumb / Tombol Kembali -->
-        <div class="mb-6">
-            <a href="{{ route('pegawai.dashboard') }}" class="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold text-blue-600 hover:text-blue-800 transition">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
-                Kembali ke Histori Aduan
-            </a>
-        </div>
-
-        <!-- Judul Halaman -->
-        <div class="mb-6">
-            <h1 class="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Formulir Buat Pengaduan Baru</h1>
-            <p class="text-xs sm:text-sm text-slate-600 mt-1">
-                Sampaikan keluhan sarana, pelayanan, atau permasalahan internal dinas secara rinci untuk segera ditindaklanjuti.
+    <!-- Info privasi -->
+    <div class="mt-5 flex gap-3 rounded-2xl bg-blue-50/70 border border-blue-100 p-4">
+        <svg class="w-6 h-6 shrink-0 text-blue-600" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+        </svg>
+        <div>
+            <p class="text-sm font-bold text-blue-900">Aduan ditangani secara internal</p>
+            <p class="mt-0.5 text-[13px] leading-relaxed text-slate-700">
+                Identitas dan lampiran hanya dapat diakses oleh Anda dan petugas yang menangani aduan.
             </p>
         </div>
+    </div>
 
-        <!-- Alert Error Validasi -->
-        @if ($errors->any())
-            <div class="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs sm:text-sm">
-                <div class="font-semibold flex items-center gap-2 mb-2">
-                    <svg class="w-5 h-5 text-rose-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    Terdapat kesalahan pengisian formulir:
-                </div>
-                <ul class="list-disc list-inside space-y-1 text-rose-700">
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
-
-        <!-- Card Form Pengaduan -->
-        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 sm:p-8">
-            <form action="{{ route('pegawai.pengajuan.store') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
-                @csrf
-
-                <!-- Pilihan Mode Pengajuan: Dengan Identitas vs Anonim -->
-                <div>
-                    <label class="block text-sm font-semibold text-slate-900 mb-2">
-                        Pilih Mode Identitas Pelapor <span class="text-rose-500">*</span>
-                    </label>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <label class="relative flex flex-col p-4 border rounded-xl cursor-pointer transition hover:border-blue-400 has-[:checked]:border-blue-600 has-[:checked]:bg-blue-50/50 has-[:checked]:ring-2 has-[:checked]:ring-blue-500/20">
-                            <div class="flex items-center justify-between mb-1.5">
-                                <span class="font-semibold text-sm text-slate-900 flex items-center gap-2">
-                                    <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                    </svg>
-                                    Dengan Identitas
-                                </span>
-                                <input type="radio" name="is_anonim" value="0" {{ old('is_anonim', '0') === '0' ? 'checked' : '' }} class="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500">
-                            </div>
-                            <p class="text-xs text-slate-500">
-                                Laporan terhubung dengan profil pegawai Anda dan dapat dipantau langsung dari dashboard ini.
-                            </p>
-                        </label>
-
-                        <label class="relative flex flex-col p-4 border rounded-xl cursor-pointer transition hover:border-indigo-400 has-[:checked]:border-indigo-600 has-[:checked]:bg-indigo-50/50 has-[:checked]:ring-2 has-[:checked]:ring-indigo-500/20">
-                            <div class="flex items-center justify-between mb-1.5">
-                                <span class="font-semibold text-sm text-slate-900 flex items-center gap-2">
-                                    <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                                    </svg>
-                                    Anonim
-                                </span>
-                                <input type="radio" name="is_anonim" value="1" {{ old('is_anonim') === '1' ? 'checked' : '' }} class="w-4 h-4 text-indigo-600 border-slate-300 focus:ring-indigo-500">
-                            </div>
-                            <p class="text-xs text-slate-500">
-                                Identitas nama dan NIP Anda dirahasiakan dari admin. Pengaduan tetap dapat Anda pantau langsung dari dashboard ini.
-                            </p>
-                        </label>
-                    </div>
-                </div>
-
-                <!-- Klasifikasi Laporan & Pilihan Sub-Klasifikasi -->
-                <div>
-                    <label for="parent_kategori_select" class="block text-sm font-semibold text-slate-900 mb-1.5">
-                        Klasifikasi Pengaduan <span class="text-rose-500">*</span>
-                    </label>
-                    <select id="parent_kategori_select" class="block w-full rounded-xl border border-slate-300 py-2.5 px-3 text-sm text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition">
-                        <option value="">-- Pilih Klasifikasi Pengaduan --</option>
-                        @foreach ($parentKategoris as $kategori)
-                            <option value="{{ $kategori->id }}"
-                                    data-keterangan="{{ $kategori->keterangan ?? '' }}"
-                                    data-children="{{ json_encode($kategori->activeChildren->map(fn($c) => ['id' => $c->id, 'nama' => $c->nama_kategori, 'keterangan' => $c->keterangan])) }}">
-                                {{ $kategori->nama_kategori }}
-                            </option>
-                        @endforeach
-                    </select>
-
-                    <!-- Info Penjelasan Klasifikasi -->
-                    <div id="kategori_keterangan_box" class="hidden mt-2 p-3.5 rounded-xl bg-blue-50/70 border border-blue-200/80 text-xs text-blue-900 flex items-start gap-2.5 transition">
-                        <svg class="w-4 h-4 text-blue-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <div>
-                            <span class="font-bold block text-blue-950">Penjelasan Klasifikasi:</span>
-                            <span id="kategori_keterangan_text" class="text-blue-800 block mt-0.5 leading-relaxed"></span>
-                        </div>
-                    </div>
-
-                    <!-- Pilihan Sub-Klasifikasi / Opsi Turunan (Misal: R2, R3, R4) -->
-                    <div id="subkategori_wrapper" class="hidden mt-4 p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2.5 transition">
-                        <div class="flex items-center justify-between">
-                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                                Pilih Jenis / Sub-Klasifikasi Spesifik <span class="text-rose-500">*</span>
-                            </label>
-                            <span class="text-[11px] text-slate-500">Pilih opsi turunan dari klasifikasi</span>
-                        </div>
-                        <div id="subkategori_options_container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-                            <!-- Diisi secara dinamis oleh JavaScript -->
-                        </div>
-                    </div>
-
-                    <!-- Hidden input kategori_id yang dikirim ke server -->
-                    <input type="hidden" name="kategori_id" id="kategori_id" value="{{ old('kategori_id') }}">
-                    @error('kategori_id')
-                        <p class="text-xs text-rose-600 mt-1.5">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <!-- Isi / Uraian Laporan -->
-                <div>
-                    <div class="flex items-center justify-between mb-1.5">
-                        <label for="isi_laporan" class="block text-sm font-semibold text-slate-900">
-                            Uraian Detail Laporan <span class="text-rose-500">*</span>
-                        </label>
-                        <span class="text-[11px] text-slate-500">Minimal 10 karakter</span>
-                    </div>
-                    <textarea name="isi_laporan"
-                              id="isi_laporan"
-                              rows="5"
-                              required
-                              placeholder="Deskripsikan secara detail permasalahan yang terjadi, lokasi spesifik, sejak kapan masalah terjadi, dan kendala operasional yang ditimbulkan..."
-                              class="block w-full rounded-xl border border-slate-300 py-2.5 px-3.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition">{{ old('isi_laporan') }}</textarea>
-                </div>
-
-                <!-- Saran Penyelesaian (Opsional) -->
-                <div>
-                    <label for="saran_penyelesaian" class="block text-sm font-semibold text-slate-900 mb-1.5">
-                        Saran / Rekomendasi Solusi <span class="text-xs font-normal text-slate-500">(Opsional)</span>
-                    </label>
-                    <textarea name="saran_penyelesaian"
-                              id="saran_penyelesaian"
-                              rows="2"
-                              placeholder="Usulan atau solusi cepat yang dapat membantu penanganan laporan..."
-                              class="block w-full rounded-xl border border-slate-300 py-2.5 px-3.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition">{{ old('saran_penyelesaian') }}</textarea>
-                </div>
-
-                <!-- Lampiran Berkas -->
-                <div>
-                    <label class="block text-sm font-semibold text-slate-900 mb-1.5">
-                        Lampiran Berkas Pendukung <span class="text-xs font-normal text-slate-500">(Opsional)</span>
-                    </label>
-                    <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-300 border-dashed rounded-xl hover:border-blue-400 transition bg-slate-50/50">
-                        <div class="space-y-1 text-center">
-                            <svg class="mx-auto h-10 w-10 text-slate-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-                                <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                            </svg>
-                            <div class="flex text-sm text-slate-600 justify-center">
-                                <label for="lampiran" class="relative cursor-pointer rounded-md font-semibold text-blue-600 hover:text-blue-500 focus-within:outline-none">
-                                    <span>Pilih berkas dari perangkat</span>
-                                    <input id="lampiran" name="lampiran[]" type="file" multiple class="sr-only" accept=".jpg,.jpeg,.png,.pdf,.doc,.docx">
-                                </label>
-                            </div>
-                            <p class="text-xs text-slate-500">
-                                Format: JPG, PNG, PDF, atau DOCX (Maksimal 5MB per berkas).
-                            </p>
-                            <p id="file-info" class="text-xs font-medium text-emerald-600 hidden mt-1"></p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Checkbox Konfirmasi -->
-                <div class="pt-2">
-                    <label class="flex items-start gap-2.5 cursor-pointer">
-                        <input type="checkbox" name="konfirmasi" required checked class="mt-1 w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500">
-                        <span class="text-xs sm:text-sm text-slate-600 leading-snug">
-                            Saya menyatakan bahwa informasi yang saya sampaikan adalah benar dan bersedia memberikan konfirmasi lebih lanjut apabila dibutuhkan oleh tim verifikator.
-                        </span>
-                    </label>
-                </div>
-
-                <!-- Tombol Aksi -->
-                <div class="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
-                    <a href="{{ route('pegawai.dashboard') }}" class="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition">
-                        Batal
-                    </a>
-                    <button type="submit" class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-md shadow-blue-500/25 transition">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                        </svg>
-                        Kirim Pengaduan
-                    </button>
-                </div>
-            </form>
+    <!-- Error validasi -->
+    @if ($errors->any())
+        <div role="alert" class="mt-5 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+            <p class="font-semibold">Ada isian yang perlu diperbaiki:</p>
+            <ul class="mt-1.5 list-disc list-inside space-y-0.5 text-rose-700">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
         </div>
-    </main>
+    @endif
 
-    <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-400 mt-10">
-        Portal Pengadu KOMPLAIN &copy; {{ date('Y') }}
-    </footer>
+    <form action="{{ route('pegawai.pengajuan.store') }}" method="POST" enctype="multipart/form-data" class="mt-6 space-y-6">
+        @csrf
+        <input type="hidden" name="konfirmasi" value="1">
 
-    <script>
-        const inputLampiran = document.getElementById('lampiran');
-        const fileInfo = document.getElementById('file-info');
+        <!-- Mode identitas -->
+        <fieldset>
+            <legend class="text-[15px] font-bold text-slate-900">Pilih mode identitas pengadu <span class="text-rose-500">*</span></legend>
+            <div class="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <label class="pilih-mode block cursor-pointer">
+                    <input type="radio" name="is_anonim" value="0" class="sr-only" {{ old('is_anonim', '0') === '0' ? 'checked' : '' }}>
+                    <div class="pilih-kartu h-full rounded-2xl border border-slate-200 bg-white p-4 text-slate-900">
+                        <div class="flex items-start justify-between">
+                            <span class="pilih-ikon flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                                </svg>
+                            </span>
+                            <span class="pilih-cek flex h-6 w-6 items-center justify-center rounded-full border-2 border-slate-300 text-transparent" aria-hidden="true">
+                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                </svg>
+                            </span>
+                        </div>
+                        <p class="mt-3 text-[15px] font-bold">Dengan identitas</p>
+                        <p class="mt-1 text-xs leading-snug opacity-70">Laporan terhubung dengan profil pegawai Anda dan dapat dipantau dari dashboard.</p>
+                    </div>
+                </label>
+                <label class="pilih-mode block cursor-pointer">
+                    <input type="radio" name="is_anonim" value="1" class="sr-only" {{ old('is_anonim') === '1' ? 'checked' : '' }}>
+                    <div class="pilih-kartu h-full rounded-2xl border border-slate-200 bg-white p-4 text-slate-900">
+                        <div class="flex items-start justify-between">
+                            <span class="pilih-ikon flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
+                                </svg>
+                            </span>
+                            <span class="pilih-cek flex h-6 w-6 items-center justify-center rounded-full border-2 border-slate-300 text-transparent" aria-hidden="true">
+                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                </svg>
+                            </span>
+                        </div>
+                        <p class="mt-3 text-[15px] font-bold">Anonim</p>
+                        <p class="mt-1 text-xs leading-snug opacity-70">Nama dan NIP Anda disembunyikan dari tampilan admin. Aduan tetap dapat Anda pantau dari dashboard.</p>
+                    </div>
+                </label>
+            </div>
+        </fieldset>
 
-        if (inputLampiran && fileInfo) {
-            inputLampiran.addEventListener('change', function () {
-                if (this.files && this.files.length > 0) {
-                    fileInfo.textContent = `✓ ${this.files.length} berkas dipilih`;
-                    fileInfo.classList.remove('hidden');
-                } else {
-                    fileInfo.classList.add('hidden');
-                }
+        <!-- Klasifikasi -->
+        <div>
+            <label for="parent_kategori_select" class="block text-sm font-bold text-slate-900">
+                Klasifikasi <span class="text-rose-500">*</span>
+            </label>
+            <div class="relative mt-2 flex items-center">
+                <select id="parent_kategori_select"
+                        class="block w-full appearance-none rounded-xl border border-slate-300 bg-white py-2.5 pl-3.5 pr-10 text-sm text-slate-800 shadow-xs focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20">
+                    <option value="">Pilih klasifikasi</option>
+                    @foreach ($parentKategoris as $kategori)
+                        <option value="{{ $kategori->id }}"
+                                data-keterangan="{{ $kategori->keterangan ?? '' }}"
+                                data-children="{{ json_encode($kategori->activeChildren->map(fn ($c) => ['id' => $c->id, 'nama' => $c->nama_kategori, 'keterangan' => $c->keterangan])) }}">
+                            {{ $kategori->nama_kategori }}
+                        </option>
+                    @endforeach
+                </select>
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </div>
+            </div>
+
+            <p id="kategori_keterangan_text" class="mt-2 hidden text-xs leading-relaxed text-slate-500"></p>
+
+            <!-- Sub-klasifikasi (diisi JavaScript) -->
+            <div id="subkategori_wrapper" class="mt-3 hidden rounded-2xl border border-slate-200 bg-white p-4">
+                <p class="text-sm font-bold text-slate-900">Pilih jenis yang paling sesuai <span class="text-rose-500">*</span></p>
+                <div id="subkategori_options_container" class="mt-3 grid grid-cols-1 gap-2.5 sm:grid-cols-2"></div>
+            </div>
+
+            <input type="hidden" name="kategori_id" id="kategori_id" value="{{ old('kategori_id') }}">
+            @error('kategori_id')
+                <p class="mt-1.5 text-xs text-rose-600">{{ $message }}</p>
+            @enderror
+        </div>
+
+        <!-- Uraian -->
+        <div>
+            <label for="isi_laporan" class="block text-sm font-bold text-slate-900">
+                Uraian detail aduan <span class="text-rose-500">*</span>
+            </label>
+            <textarea name="isi_laporan" id="isi_laporan" rows="6" required minlength="10"
+                      placeholder="Contoh: AC di ruang rapat B tidak mengeluarkan udara dingin sejak Senin pagi."
+                      class="mt-2 block w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm leading-relaxed text-slate-800 placeholder-slate-400 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20">{{ old('isi_laporan') }}</textarea>
+            <p class="mt-1.5 text-xs text-slate-500">Jelaskan kejadian, waktu, dan dampak yang Anda alami.</p>
+        </div>
+
+        <!-- Saran -->
+        <div>
+            <label for="saran_penyelesaian" class="block text-sm font-bold text-slate-900">Saran / rekomendasi solusi</label>
+            <textarea name="saran_penyelesaian" id="saran_penyelesaian" rows="2"
+                      class="mt-2 block w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20">{{ old('saran_penyelesaian') }}</textarea>
+        </div>
+
+        <!-- Lampiran -->
+        <div>
+            <span class="block text-sm font-bold text-slate-900">Lampiran pendukung</span>
+            <label for="lampiran"
+                   class="mt-2 flex cursor-pointer flex-col items-center rounded-2xl border-2 border-dashed border-slate-300 bg-white px-6 py-8 text-center transition hover:border-blue-400 focus-within:border-blue-600">
+                <svg class="h-8 w-8 text-blue-600" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
+                </svg>
+                <span class="mt-2 text-sm font-semibold text-blue-600">Pilih foto atau dokumen</span>
+                <span class="mt-1 text-xs text-slate-500">JPG, PNG, PDF · Maks. 5 MB per berkas</span>
+            </label>
+            <input id="lampiran" name="lampiran[]" type="file" multiple accept=".jpg,.jpeg,.png,.pdf" class="sr-only">
+            <p id="lampiran-error" class="mt-2 hidden text-xs text-rose-600" role="alert"></p>
+            <ul id="lampiran-list" class="mt-3 space-y-2"></ul>
+        </div>
+
+        <p class="text-xs leading-relaxed text-slate-500">
+            <span class="text-rose-500">*</span> Wajib diisi. Pastikan informasi yang disampaikan benar dan tidak memuat data sensitif yang tidak diperlukan.
+        </p>
+
+        <button type="submit"
+                class="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2">
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+            </svg>
+            Kirim pengaduan
+        </button>
+    </form>
+</div>
+@endsection
+
+@push('head')
+<style>
+    .pilih-kartu, .pilih-ikon, .pilih-cek { transition: background-color .15s, border-color .15s, color .15s; }
+    .pilih-mode:hover .pilih-kartu { border-color: #60a5fa; }
+    .pilih-mode input:checked + .pilih-kartu { background: #1e3a8a; border-color: #1e3a8a; color: #fff; }
+    .pilih-mode input:checked + .pilih-kartu .pilih-ikon { background: rgba(255,255,255,.15); color: #fff; }
+    .pilih-mode input:checked + .pilih-kartu .pilih-cek { background: #3b82f6; border-color: #3b82f6; color: #fff; }
+    .pilih-mode input:focus-visible + .pilih-kartu { outline: 2px solid #2563eb; outline-offset: 2px; }
+</style>
+@endpush
+
+@push('scripts')
+<script>
+    // ---------- Lampiran: daftar berkas + hapus per berkas ----------
+    (function () {
+        const input = document.getElementById('lampiran');
+        const list = document.getElementById('lampiran-list');
+        const err = document.getElementById('lampiran-error');
+        const MAKS = 5 * 1024 * 1024;
+        const IZIN = ['jpg', 'jpeg', 'png', 'pdf'];
+        let berkas = [];
+
+        function ukuran(b) {
+            return b >= 1048576
+                ? (b / 1048576).toFixed(1).replace('.', ',') + ' MB'
+                : Math.max(1, Math.round(b / 1024)) + ' KB';
+        }
+
+        function sinkron() {
+            const dt = new DataTransfer();
+            berkas.forEach(f => dt.items.add(f));
+            input.files = dt.files;
+
+            list.innerHTML = '';
+            berkas.forEach((f, i) => {
+                const li = document.createElement('li');
+                li.className = 'flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm';
+
+                const nama = document.createElement('span');
+                nama.className = 'min-w-0 flex-1 truncate font-medium text-slate-800';
+                nama.textContent = f.name;
+
+                const info = document.createElement('span');
+                info.className = 'shrink-0 text-xs text-slate-500';
+                info.textContent = ukuran(f.size);
+
+                const hapus = document.createElement('button');
+                hapus.type = 'button';
+                hapus.className = 'shrink-0 rounded-full p-1 text-slate-500 hover:bg-slate-100 hover:text-rose-600';
+                hapus.setAttribute('aria-label', 'Hapus ' + f.name);
+                hapus.innerHTML = '<svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>';
+                hapus.addEventListener('click', () => { berkas.splice(i, 1); sinkron(); });
+
+                li.append(nama, info, hapus);
+                list.appendChild(li);
             });
         }
 
-        // Logic Interaktif Kategori & Sub-Kategori
-        document.addEventListener('DOMContentLoaded', function () {
-            const parentSelect = document.getElementById('parent_kategori_select');
-            const hiddenKategoriId = document.getElementById('kategori_id');
-            const keteranganBox = document.getElementById('kategori_keterangan_box');
-            const keteranganText = document.getElementById('kategori_keterangan_text');
-            const subkategoriWrapper = document.getElementById('subkategori_wrapper');
-            const subkategoriContainer = document.getElementById('subkategori_options_container');
-
-            const initialKategoriId = "{{ old('kategori_id') }}";
-
-            function updateCategoryUI() {
-                const selectedOption = parentSelect.options[parentSelect.selectedIndex];
-                if (!selectedOption || !selectedOption.value) {
-                    keteranganBox.classList.add('hidden');
-                    subkategoriWrapper.classList.add('hidden');
-                    subkategoriContainer.innerHTML = '';
-                    hiddenKategoriId.value = '';
-                    return;
+        input.addEventListener('change', function () {
+            const pesan = [];
+            Array.from(input.files).forEach(f => {
+                const ext = f.name.split('.').pop().toLowerCase();
+                if (!IZIN.includes(ext)) {
+                    pesan.push(f.name + ': format tidak didukung.');
+                } else if (f.size > MAKS) {
+                    pesan.push(f.name + ': ukuran lebih dari 5 MB.');
+                } else if (!berkas.some(b => b.name === f.name && b.size === f.size)) {
+                    berkas.push(f);
                 }
+            });
+            err.textContent = pesan.join(' ');
+            err.classList.toggle('hidden', pesan.length === 0);
+            sinkron();
+        });
+    })();
 
-                const keterangan = selectedOption.getAttribute('data-keterangan');
-                if (keterangan && keterangan.trim() !== '') {
-                    keteranganText.textContent = keterangan;
-                    keteranganBox.classList.remove('hidden');
-                } else {
-                    keteranganBox.classList.add('hidden');
-                }
+    // ---------- Klasifikasi & sub-klasifikasi ----------
+    document.addEventListener('DOMContentLoaded', function () {
+        const parentSelect = document.getElementById('parent_kategori_select');
+        const hiddenKategoriId = document.getElementById('kategori_id');
+        const keteranganText = document.getElementById('kategori_keterangan_text');
+        const subWrapper = document.getElementById('subkategori_wrapper');
+        const subContainer = document.getElementById('subkategori_options_container');
+        const initialKategoriId = "{{ old('kategori_id') }}";
 
-                let children = [];
-                try {
-                    children = JSON.parse(selectedOption.getAttribute('data-children') || '[]');
-                } catch (e) {
-                    children = [];
-                }
+        const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-                if (children.length > 0) {
-                    subkategoriWrapper.classList.remove('hidden');
-                    subkategoriContainer.innerHTML = '';
+        function updateCategoryUI() {
+            const opt = parentSelect.options[parentSelect.selectedIndex];
 
-                    // Jika saat ini hidden bernilai parent id, kosongkan karena harus memilih sub
-                    if (hiddenKategoriId.value === selectedOption.value) {
-                        hiddenKategoriId.value = '';
-                    }
-
-                    children.forEach(child => {
-                        const isChecked = hiddenKategoriId.value == child.id;
-                        const label = document.createElement('label');
-                        label.className = 'flex flex-col p-3 rounded-xl border bg-white cursor-pointer transition hover:border-blue-400 has-[:checked]:border-blue-600 has-[:checked]:bg-blue-50/60 has-[:checked]:ring-2 has-[:checked]:ring-blue-500/20';
-
-                        label.innerHTML = `
-                            <div class="flex items-center justify-between mb-1">
-                                <span class="font-bold text-xs sm:text-sm text-slate-800">${child.nama}</span>
-                                <input type="radio" name="_subkategori_radio" value="${child.id}" ${isChecked ? 'checked' : ''} class="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500">
-                            </div>
-                            ${child.keterangan ? `<p class="text-[11px] text-slate-500 leading-snug">${child.keterangan}</p>` : ''}
-                        `;
-
-                        const radio = label.querySelector('input[type="radio"]');
-                        radio.addEventListener('change', function () {
-                            hiddenKategoriId.value = this.value;
-                        });
-
-                        subkategoriContainer.appendChild(label);
-                    });
-                } else {
-                    subkategoriWrapper.classList.add('hidden');
-                    subkategoriContainer.innerHTML = '';
-                    hiddenKategoriId.value = selectedOption.value;
-                }
+            if (!opt || !opt.value) {
+                keteranganText.classList.add('hidden');
+                subWrapper.classList.add('hidden');
+                subContainer.innerHTML = '';
+                hiddenKategoriId.value = '';
+                return;
             }
 
-            parentSelect.addEventListener('change', function () {
-                hiddenKategoriId.value = '';
-                updateCategoryUI();
-            });
+            const ket = (opt.getAttribute('data-keterangan') || '').trim();
+            keteranganText.textContent = ket;
+            keteranganText.classList.toggle('hidden', ket === '');
 
-            // Pulihkan status pilihan jika ada old('kategori_id')
-            if (initialKategoriId) {
-                let matched = false;
-                for (let i = 0; i < parentSelect.options.length; i++) {
-                    const opt = parentSelect.options[i];
-                    if (opt.value == initialKategoriId) {
-                        parentSelect.selectedIndex = i;
-                        matched = true;
-                        break;
-                    }
-                    let children = [];
-                    try {
-                        children = JSON.parse(opt.getAttribute('data-children') || '[]');
-                    } catch(e) {}
-                    if (children.some(c => c.id == initialKategoriId)) {
-                        parentSelect.selectedIndex = i;
-                        matched = true;
-                        break;
-                    }
-                }
-                if (matched) {
+            let children = [];
+            try { children = JSON.parse(opt.getAttribute('data-children') || '[]'); } catch (e) {}
+
+            if (children.length === 0) {
+                subWrapper.classList.add('hidden');
+                subContainer.innerHTML = '';
+                hiddenKategoriId.value = opt.value;
+                return;
+            }
+
+            subWrapper.classList.remove('hidden');
+            subContainer.innerHTML = '';
+            if (hiddenKategoriId.value === opt.value) hiddenKategoriId.value = '';
+
+            children.forEach(child => {
+                const label = document.createElement('label');
+                label.className = 'flex cursor-pointer flex-col rounded-xl border border-slate-200 bg-white p-3 transition hover:border-blue-400 has-[:checked]:border-blue-600 has-[:checked]:bg-blue-50 has-[:checked]:ring-2 has-[:checked]:ring-blue-500/20';
+                label.innerHTML =
+                    '<div class="flex items-center justify-between gap-2">' +
+                        '<span class="text-sm font-semibold text-slate-800">' + esc(child.nama) + '</span>' +
+                        '<input type="radio" name="_subkategori_radio" value="' + esc(child.id) + '" class="h-4 w-4 border-slate-300 text-blue-600 focus:ring-blue-600"' + (hiddenKategoriId.value == child.id ? ' checked' : '') + '>' +
+                    '</div>' +
+                    (child.keterangan ? '<p class="mt-1 text-xs leading-snug text-slate-500">' + esc(child.keterangan) + '</p>' : '');
+                label.querySelector('input').addEventListener('change', function () {
+                    hiddenKategoriId.value = this.value;
+                });
+                subContainer.appendChild(label);
+            });
+        }
+
+        parentSelect.addEventListener('change', function () {
+            hiddenKategoriId.value = '';
+            updateCategoryUI();
+        });
+
+        // Pulihkan pilihan setelah validasi gagal
+        if (initialKategoriId) {
+            for (let i = 0; i < parentSelect.options.length; i++) {
+                const opt = parentSelect.options[i];
+                let children = [];
+                try { children = JSON.parse(opt.getAttribute('data-children') || '[]'); } catch (e) {}
+                if (opt.value == initialKategoriId || children.some(c => c.id == initialKategoriId)) {
+                    parentSelect.selectedIndex = i;
                     hiddenKategoriId.value = initialKategoriId;
                     updateCategoryUI();
+                    break;
                 }
             }
+        }
 
-            // Cegah submit form jika kategori belum dipilih atau subkategori belum ditentukan
-            const form = hiddenKategoriId.closest('form');
-            if (form) {
-                form.addEventListener('submit', function (e) {
-                    if (!hiddenKategoriId.value) {
-                        e.preventDefault();
-                        if (!parentSelect.value) {
-                            alert('Silakan pilih klasifikasi pengaduan.');
-                            parentSelect.focus();
-                        } else {
-                            alert('Klasifikasi ini memiliki pilihan sub-klasifikasi spesifik. Silakan pilih salah satu opsi yang tersedia.');
-                            subkategoriWrapper.scrollIntoView({ behavior: 'smooth' });
-                        }
-                    }
-                });
+        // Cegah kirim jika klasifikasi belum lengkap
+        const form = hiddenKategoriId.closest('form');
+        form.addEventListener('submit', function (e) {
+            if (!hiddenKategoriId.value) {
+                e.preventDefault();
+                if (!parentSelect.value) {
+                    alert('Silakan pilih klasifikasi aduan.');
+                    parentSelect.focus();
+                } else {
+                    alert('Pilih salah satu jenis yang tersedia pada klasifikasi ini.');
+                    subWrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
             }
         });
-    </script>
-</body>
-</html>
+    });
+</script>
+@endpush

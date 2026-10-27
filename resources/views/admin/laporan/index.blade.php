@@ -113,14 +113,14 @@
                         <label class="block text-xs font-semibold text-slate-600 mb-1">Status Laporan</label>
                         <select name="status" class="w-full text-xs rounded-xl border border-slate-300 px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600">
                             <option value="">-- Semua Status --</option>
-                            <option value="verifikasi" {{ in_array($filter['status'] ?? '', ['verifikasi', 'menunggu', 'diajukan']) ? 'selected' : '' }}>Verifikasi</option>
+                            <option value="belum_verifikasi" {{ ($filter['status'] ?? '') === 'belum_verifikasi' ? 'selected' : '' }}>Belum Diverifikasi (Baru)</option>
+                            <option value="verifikasi" {{ in_array($filter['status'] ?? '', ['verifikasi', 'menunggu', 'diajukan']) ? 'selected' : '' }}>Verifikasi (Tahap Awal)</option>
                             <option value="diproses" {{ ($filter['status'] ?? '') === 'diproses' ? 'selected' : '' }}>Sedang Diproses (Semua Tahap)</option>
-                            <option value="identifikasi" {{ ($filter['status'] ?? '') === 'identifikasi' ? 'selected' : '' }}>&nbsp;&nbsp;↳ Diproses: Identifikasi</option>
-                            <option value="klarifikasi" {{ ($filter['status'] ?? '') === 'klarifikasi' ? 'selected' : '' }}>&nbsp;&nbsp;↳ Diproses: Klarifikasi</option>
+                            <option value="identifikasi_klarifikasi" {{ in_array($filter['status'] ?? '', ['identifikasi_klarifikasi', 'identifikasi', 'klarifikasi']) ? 'selected' : '' }}>&nbsp;&nbsp;↳ Diproses: Identifikasi / Klarifikasi</option>
                             <option value="rencana_aksi" {{ ($filter['status'] ?? '') === 'rencana_aksi' ? 'selected' : '' }}>&nbsp;&nbsp;↳ Diproses: Rencana Aksi</option>
                             <option value="aksi" {{ ($filter['status'] ?? '') === 'aksi' ? 'selected' : '' }}>&nbsp;&nbsp;↳ Diproses: Aksi / Tindakan</option>
-                            <option value="selesai_ditangani" {{ ($filter['status'] ?? '') === 'selesai_ditangani' ? 'selected' : '' }}>Selesai Ditangani</option>
-                            <option value="selesai_ditolak" {{ in_array($filter['status'] ?? '', ['selesai_ditolak', 'ditolak']) ? 'selected' : '' }}>Selesai Ditolak</option>
+                            <option value="selesai" {{ in_array($filter['status'] ?? '', ['selesai', 'selesai_ditangani', 'selesai_ditolak', 'ditolak']) ? 'selected' : '' }}>Selesai (Semua)</option>
+                            <option value="selesai_setelah_tinjau_ulang" {{ ($filter['status'] ?? '') === 'selesai_setelah_tinjau_ulang' ? 'selected' : '' }}>&nbsp;&nbsp;↳ Selesai setelah tinjau ulang</option>
                         </select>
                     </div>
 
@@ -276,11 +276,16 @@
                                 </td>
                                 <td class="py-3.5 px-4 whitespace-nowrap">
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold
-                                        @if(in_array($lap->status, ['menunggu', 'diajukan'])) bg-amber-100 text-amber-800
+                                        @if($lap->status === 'belum_verifikasi') bg-rose-100 text-rose-800 border border-rose-200/60
+                                        @elseif($lap->konfirmasi_pelapor === 'keberatan' && $lap->status !== 'selesai') bg-purple-100 text-purple-800
+                                        @elseif($lap->status === 'selesai' && $lap->sub_status === 'selesai_setelah_tinjau_ulang') bg-teal-100 text-teal-800
+                                        @elseif(in_array($lap->status, ['menunggu', 'diajukan', 'verifikasi'])) bg-amber-100 text-amber-800
                                         @elseif($lap->status === 'diproses') bg-blue-100 text-blue-800
-                                        @elseif($lap->status === 'selesai' && $lap->sub_status === 'selesai_ditolak') bg-rose-100 text-rose-800
                                         @elseif($lap->status === 'selesai') bg-emerald-100 text-emerald-800
                                         @else bg-slate-100 text-slate-800 @endif">
+                                        @if($lap->status === 'belum_verifikasi')
+                                            <span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse mr-1.5"></span>
+                                        @endif
                                         {{ $lap->status_label }}
                                     </span>
                                 </td>

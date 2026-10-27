@@ -4,11 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 
 #[Fillable([
@@ -25,6 +25,9 @@ use Illuminate\Support\Str;
     'pernyataan_disetujui',
     'waktu_persetujuan',
     'tanggal_selesai',
+    'konfirmasi_pelapor',
+    'dikonfirmasi_pada',
+    'jumlah_keberatan',
 ])]
 
 #[Table('pengajuan')]
@@ -36,8 +39,7 @@ class Pengajuan extends Model
      * Daftar tahapan sub-proses ketika laporan berstatus diproses.
      */
     public const SUB_STATUS_PROSES = [
-        'identifikasi' => 'Identifikasi',
-        'klarifikasi' => 'Klarifikasi',
+        'identifikasi_klarifikasi' => 'Identifikasi / Klarifikasi',
         'rencana_aksi' => 'Rencana Aksi',
         'aksi' => 'Aksi / Tindakan',
     ];
@@ -46,8 +48,8 @@ class Pengajuan extends Model
      * Daftar hasil akhir ketika laporan berstatus selesai.
      */
     public const SUB_STATUS_SELESAI = [
-        'selesai_ditangani' => 'Selesai Ditangani',
-        'selesai_ditolak' => 'Selesai Ditolak',
+        'selesai' => 'Selesai',
+        'selesai_setelah_tinjau_ulang' => 'Selesai setelah tinjau ulang',
     ];
 
     protected function casts(): array
@@ -56,12 +58,9 @@ class Pengajuan extends Model
             'pernyataan_disetujui' => 'boolean',
             'waktu_persetujuan' => 'datetime',
             'tanggal_selesai' => 'datetime',
+            'dikonfirmasi_pada' => 'datetime',
+            'jumlah_keberatan' => 'integer',
         ];
-    }
-
-    public function getNomorTiketAttribute(): string
-    {
-        return '#'.str_pad((string) ($this->id ?? 0), 5, '0', STR_PAD_LEFT);
     }
 
     public function getJudulAttribute(): string
@@ -72,46 +71,81 @@ class Pengajuan extends Model
     public function getSubStatusLabelAttribute(): ?string
     {
         return match ($this->sub_status) {
-            'identifikasi' => 'Identifikasi',
-            'klarifikasi' => 'Klarifikasi',
+            'identifikasi_klarifikasi', 'identifikasi', 'klarifikasi' => 'Identifikasi / Klarifikasi',
             'rencana_aksi' => 'Rencana Aksi',
             'aksi' => 'Aksi / Tindakan',
-            'selesai_ditangani' => 'Selesai Ditangani',
-            'selesai_ditolak' => 'Selesai Ditolak',
+            'selesai_setelah_tinjau_ulang' => 'Selesai setelah tinjau ulang',
+            'selesai_ditangani', 'selesai_ditolak', 'selesai' => 'Selesai',
             default => $this->sub_status ? ucfirst(str_replace('_', ' ', $this->sub_status)) : null,
         };
     }
 
     public function getStatusLabelAttribute(): string
     {
-        if (in_array($this->status, ['menunggu', 'diajukan'], true)) {
+        if ($this->konfirmasi_pelapor === 'keberatan' && $this->status !== 'selesai') {
+            return 'Ditinjau ulang';
+        }
+
+        if ($this->status === 'belum_verifikasi') {
+            return 'Belum Diverifikasi';
+        }
+
+        if (in_array($this->status, ['verifikasi', 'menunggu', 'diajukan'], true)) {
             return 'Verifikasi';
         }
 
         if ($this->status === 'diproses' || $this->status === 'proses') {
-            if ($this->sub_status && isset(self::SUB_STATUS_PROSES[$this->sub_status])) {
-                return 'Diproses: '.self::SUB_STATUS_PROSES[$this->sub_status];
+            $labelSub = match ($this->sub_status) {
+                'identifikasi_klarifikasi', 'identifikasi', 'klarifikasi' => 'Identifikasi / Klarifikasi',
+                'rencana_aksi' => 'Rencana Aksi',
+                'aksi' => 'Aksi / Tindakan',
+                default => self::SUB_STATUS_PROSES[$this->sub_status] ?? null,
+            };
+
+            if ($labelSub) {
+                return 'Diproses ('.$labelSub.')';
             }
 
             return 'Diproses';
         }
 
-        if ($this->status === 'selesai') {
-            if ($this->sub_status === 'selesai_ditolak') {
-                return 'Selesai Ditolak';
-            }
-            if ($this->sub_status === 'selesai_ditangani') {
-                return 'Selesai Ditangani';
+        if ($this->status === 'selesai' || $this->status === 'ditolak') {
+            if ($this->sub_status === 'selesai_setelah_tinjau_ulang') {
+                return 'Selesai setelah tinjau ulang';
             }
 
             return 'Selesai';
         }
 
-        if ($this->status === 'ditolak') {
-            return 'Selesai Ditolak';
-        }
+        return ucfirst(str_replace('_', ' ', $this->status ?? 'Belum Diverifikasi'));
+    }
 
-        return ucfirst($this->status ?? 'Verifikasi');
+    public function getPerluKonfirmasiAttribute(): bool
+    {
+        return $this->status === 'selesai'
+            && is_null($this->konfirmasi_pelapor)
+            && ($this->jumlah_keberatan ?? 0) === 0
+            && $this->sub_status !== 'selesai_setelah_tinjau_ulang';
+    }
+
+    public function getBisaAjukanKeberatanAttribute(): bool
+    {
+        return $this->status === 'selesai'
+            && ($this->jumlah_keberatan ?? 0) < 1
+            && $this->sub_status !== 'selesai_setelah_tinjau_ulang'
+            && $this->konfirmasi_pelapor !== 'dikonfirmasi';
+    }
+
+    public function scopePerluKonfirmasi(Builder $query): Builder
+    {
+        return $query->where('status', 'selesai')
+            ->whereNull('konfirmasi_pelapor')
+            ->where(function ($q) {
+                $q->whereNull('jumlah_keberatan')->orWhere('jumlah_keberatan', 0);
+            })
+            ->where(function ($q) {
+                $q->whereNull('sub_status')->orWhere('sub_status', '!=', 'selesai_setelah_tinjau_ulang');
+            });
     }
 
     public function getIsiLaporanAttribute(): ?string
@@ -136,10 +170,10 @@ class Pengajuan extends Model
 
     public function setStatusAttribute(?string $value): void
     {
-        if ($value === 'diajukan' || $value === 'verifikasi') {
-            $value = 'menunggu';
+        if ($value === 'diajukan') {
+            $value = 'belum_verifikasi';
         }
-        $this->attributes['status'] = $value ?? 'menunggu';
+        $this->attributes['status'] = $value ?? 'belum_verifikasi';
     }
 
     public function user(): BelongsTo
@@ -159,11 +193,6 @@ class Pengajuan extends Model
         }
 
         return $this->kategori->nama_lengkap;
-    }
-
-    public function tokenPengajuan(): HasOne
-    {
-        return $this->hasOne(TokenPengajuan::class);
     }
 
     public function tanggapans(): HasMany

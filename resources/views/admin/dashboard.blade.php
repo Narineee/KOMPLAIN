@@ -89,12 +89,9 @@
                             <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                             <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                         </span>
-                        Realtime: {{ $namaBulanTahun }}
+                        {{ $namaBulanTahun }}
                     </span>
                 </div>
-                <p class="text-xs sm:text-sm text-slate-500 mt-1">
-                    Pantau volume laporan tahun berjalan dan perkembangan realtime bulan aktif.
-                </p>
             </div>
             <div class="flex items-center gap-3">
                 <div class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white border border-slate-200/90 text-slate-800 shadow-xs flex items-center gap-2">
@@ -133,7 +130,7 @@
                 </div>
 
                 <div class="mt-6 pt-4 border-t border-indigo-800/80 relative z-10">
-                    <div class="grid grid-cols-4 gap-2 text-center text-xs">
+                    <div class="grid grid-cols-3 gap-2 text-center text-xs">
                         <div class="bg-white/5 rounded-xl py-1.5 px-1">
                             <span class="block text-[10px] text-indigo-300 font-medium">Verifikasi</span>
                             <span class="block font-bold text-amber-300 mt-0.5">{{ $statistikTahun['diajukan'] }}</span>
@@ -143,12 +140,8 @@
                             <span class="block font-bold text-blue-300 mt-0.5">{{ $statistikTahun['diproses'] }}</span>
                         </div>
                         <div class="bg-white/5 rounded-xl py-1.5 px-1">
-                            <span class="block text-[10px] text-indigo-300 font-medium">Ditangani</span>
-                            <span class="block font-bold text-emerald-300 mt-0.5">{{ $statistikTahun['selesai_ditangani'] }}</span>
-                        </div>
-                        <div class="bg-white/5 rounded-xl py-1.5 px-1">
-                            <span class="block text-[10px] text-indigo-300 font-medium">Ditolak</span>
-                            <span class="block font-bold text-rose-300 mt-0.5">{{ $statistikTahun['selesai_ditolak'] }}</span>
+                            <span class="block text-[10px] text-indigo-300 font-medium">Selesai</span>
+                            <span class="block font-bold text-emerald-300 mt-0.5">{{ $statistikTahun['selesai'] }}</span>
                         </div>
                     </div>
                 </div>
@@ -164,7 +157,7 @@
                                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-75"></span>
                                 <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-300"></span>
                             </span>
-                            Realtime: {{ $namaBulan }}
+                            {{ $namaBulan }}
                         </span>
                         <span class="text-[10px] text-blue-100 font-medium bg-white/10 px-2 py-0.5 rounded-full" title="Hitungan akan otomatis kembali ke 0 ketika tanggal masuk ke awal bulan berikutnya">
                             Reset tiap bulan
@@ -183,7 +176,7 @@
                 </div>
 
                 <div class="mt-6 pt-4 border-t border-white/20 relative z-10">
-                    <div class="grid grid-cols-4 gap-2 text-center text-xs">
+                    <div class="grid grid-cols-3 gap-2 text-center text-xs">
                         <div class="bg-white/10 rounded-xl py-1.5 px-1">
                             <span class="block text-[10px] text-blue-100 font-medium">Verifikasi</span>
                             <span class="block font-bold text-amber-200 mt-0.5">{{ $statistikBulan['diajukan'] }}</span>
@@ -193,12 +186,8 @@
                             <span class="block font-bold text-sky-200 mt-0.5">{{ $statistikBulan['diproses'] }}</span>
                         </div>
                         <div class="bg-white/10 rounded-xl py-1.5 px-1">
-                            <span class="block text-[10px] text-blue-100 font-medium">Ditangani</span>
-                            <span class="block font-bold text-emerald-200 mt-0.5">{{ $statistikBulan['selesai_ditangani'] }}</span>
-                        </div>
-                        <div class="bg-white/10 rounded-xl py-1.5 px-1">
-                            <span class="block text-[10px] text-blue-100 font-medium">Ditolak</span>
-                            <span class="block font-bold text-rose-200 mt-0.5">{{ $statistikBulan['selesai_ditolak'] }}</span>
+                            <span class="block text-[10px] text-blue-100 font-medium">Selesai</span>
+                            <span class="block font-bold text-emerald-200 mt-0.5">{{ $statistikBulan['selesai'] }}</span>
                         </div>
                     </div>
                 </div>
@@ -226,7 +215,7 @@
                 </div>
 
                 <div class="mt-6 pt-4 border-t border-slate-100">
-                    <div class="grid grid-cols-4 gap-2 text-center text-xs">
+                    <div class="grid grid-cols-3 gap-2 text-center text-xs">
                         <div class="bg-slate-50 rounded-xl py-1.5 px-1 border border-slate-100">
                             <span class="block text-[10px] text-slate-400 font-medium">Verifikasi</span>
                             <span class="block font-bold text-amber-700 mt-0.5">{{ $statistik['diajukan'] }}</span>
@@ -236,12 +225,8 @@
                             <span class="block font-bold text-blue-700 mt-0.5">{{ $statistik['diproses'] }}</span>
                         </div>
                         <div class="bg-slate-50 rounded-xl py-1.5 px-1 border border-slate-100">
-                            <span class="block text-[10px] text-slate-400 font-medium">Ditangani</span>
-                            <span class="block font-bold text-emerald-700 mt-0.5">{{ $statistik['selesai_ditangani'] }}</span>
-                        </div>
-                        <div class="bg-slate-50 rounded-xl py-1.5 px-1 border border-slate-100">
-                            <span class="block text-[10px] text-slate-400 font-medium">Ditolak</span>
-                            <span class="block font-bold text-rose-700 mt-0.5">{{ $statistik['selesai_ditolak'] }}</span>
+                            <span class="block text-[10px] text-slate-400 font-medium">Selesai</span>
+                            <span class="block font-bold text-emerald-700 mt-0.5">{{ $statistik['selesai'] }}</span>
                         </div>
                     </div>
                 </div>
@@ -252,7 +237,7 @@
         @php
             $periods = [
                 'bulan' => [
-                    'title' => 'Bulan Ini (Realtime: ' . $namaBulan . ')',
+                    'title' => 'Bulan Ini (' . $namaBulan . ')',
                     'subtitle' => 'Data dinamis bulan berjalan ' . $namaBulanTahun . ' (reset otomatis tiap awal bulan)',
                     'stats' => $statistikBulan,
                     'badge' => '⚡ Realtime ' . $namaBulan,
@@ -289,7 +274,7 @@
                             id="tab-bulan"
                             class="px-3 py-1.5 rounded-lg transition bg-white text-indigo-700 shadow-sm flex items-center gap-1.5 font-semibold">
                         <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                        <span>Bulan Ini (Realtime)</span>
+                        <span>Bulan Ini</span>
                     </button>
                     <button type="button"
                             onclick="switchPeriod('tahun')"
@@ -312,11 +297,6 @@
             @foreach ($periods as $key => $p)
                 @php
                     $st = $p['stats'];
-                    $tot = $st['total'];
-                    $pDiajukan = $tot > 0 ? round(($st['diajukan'] / $tot) * 100, 1) : 0;
-                    $pDiproses = $tot > 0 ? round(($st['diproses'] / $tot) * 100, 1) : 0;
-                    $pDitangani = $tot > 0 ? round(($st['selesai_ditangani'] / $tot) * 100, 1) : 0;
-                    $pDitolak  = $tot > 0 ? round(($st['selesai_ditolak'] / $tot) * 100, 1) : 0;
                 @endphp
                 <div id="panel-{{ $key }}" class="space-y-3 {{ $key !== 'bulan' ? 'hidden' : '' }}">
                     <div class="flex items-center justify-between text-xs text-slate-500 px-1">
@@ -326,7 +306,7 @@
                         </span>
                     </div>
 
-                    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         <!-- Total Periode Card -->
                         <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
                             <div>
@@ -334,7 +314,7 @@
                                 <div class="text-3xl font-extrabold text-slate-900 mt-2">{{ number_format($st['total']) }}</div>
                             </div>
                             <div class="mt-3 pt-3 border-t border-slate-100 text-[11px] text-slate-500 flex items-center justify-between">
-                                <span>Basis 100%</span>
+                                <span>Total pengaduan</span>
                                 <span class="font-medium text-slate-700">Laporan</span>
                             </div>
                         </div>
@@ -344,12 +324,17 @@
                             <div>
                                 <div class="text-[11px] font-bold text-amber-600 uppercase tracking-wider flex items-center justify-between">
                                     <span>Verifikasi</span>
-                                    <span class="text-[10px] font-bold bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded">{{ $pDiajukan }}%</span>
+                                    @if (($st['belum_verifikasi'] ?? 0) > 0)
+                                        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] bg-rose-100 text-rose-700 font-semibold">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span>
+                                            {{ $st['belum_verifikasi'] }} Belum Dibuka
+                                        </span>
+                                    @endif
                                 </div>
                                 <div class="text-3xl font-extrabold text-amber-700 mt-2">{{ number_format($st['diajukan']) }}</div>
                             </div>
                             <div class="mt-3 pt-3 border-t border-amber-100 text-[11px] text-amber-700/80 flex items-center justify-between">
-                                <span>Perlu verifikasi</span>
+                                <span>{{ $st['belum_verifikasi'] ?? 0 }} Belum Diverifikasi &bull; {{ $st['verifikasi'] ?? 0 }} Diverifikasi</span>
                                 <span class="font-semibold">{{ $st['diajukan'] }} lap</span>
                             </div>
                         </div>
@@ -357,44 +342,27 @@
                         <!-- Diproses Card -->
                         <div class="bg-white p-5 rounded-2xl border border-blue-200/80 shadow-sm bg-blue-50/20 flex flex-col justify-between">
                             <div>
-                                <div class="text-[11px] font-bold text-blue-600 uppercase tracking-wider flex items-center justify-between">
+                                <div class="text-[11px] font-bold text-blue-600 uppercase tracking-wider">
                                     <span>Diproses</span>
-                                    <span class="text-[10px] font-bold bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">{{ $pDiproses }}%</span>
                                 </div>
                                 <div class="text-3xl font-extrabold text-blue-700 mt-2">{{ number_format($st['diproses']) }}</div>
                             </div>
                             <div class="mt-3 pt-3 border-t border-blue-100 text-[10px] text-blue-700/80">
-                                <span>Tahap: {{ $st['proses_identifikasi'] }} Identifikasi &bull; {{ $st['proses_klarifikasi'] }} Klarifikasi &bull; {{ $st['proses_rencana_aksi'] }} Rencana &bull; {{ $st['proses_aksi'] }} Aksi</span>
+                                <span>Tahap: {{ $st['proses_identifikasi_klarifikasi'] }} Identifikasi / Klarifikasi &bull; {{ $st['proses_rencana_aksi'] }} Rencana &bull; {{ $st['proses_aksi'] }} Aksi</span>
                             </div>
                         </div>
 
-                        <!-- Selesai Ditangani Card -->
+                        <!-- Selesai Card -->
                         <div class="bg-white p-5 rounded-2xl border border-emerald-200/80 shadow-sm bg-emerald-50/20 flex flex-col justify-between">
                             <div>
-                                <div class="text-[11px] font-bold text-emerald-600 uppercase tracking-wider flex items-center justify-between">
-                                    <span>Selesai Ditangani</span>
-                                    <span class="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded">{{ $pDitangani }}%</span>
+                                <div class="text-[11px] font-bold text-emerald-600 uppercase tracking-wider">
+                                    <span>Selesai</span>
                                 </div>
-                                <div class="text-3xl font-extrabold text-emerald-700 mt-2">{{ number_format($st['selesai_ditangani']) }}</div>
+                                <div class="text-3xl font-extrabold text-emerald-700 mt-2">{{ number_format($st['selesai']) }}</div>
                             </div>
                             <div class="mt-3 pt-3 border-t border-emerald-100 text-[11px] text-emerald-700/80 flex items-center justify-between">
                                 <span>Tuntas ditangani</span>
-                                <span class="font-semibold">{{ $st['selesai_ditangani'] }} lap</span>
-                            </div>
-                        </div>
-
-                        <!-- Selesai Ditolak Card -->
-                        <div class="bg-white p-5 rounded-2xl border border-rose-200/80 shadow-sm bg-rose-50/20 flex flex-col justify-between">
-                            <div>
-                                <div class="text-[11px] font-bold text-rose-600 uppercase tracking-wider flex items-center justify-between">
-                                    <span>Selesai Ditolak</span>
-                                    <span class="text-[10px] font-bold bg-rose-100 text-rose-800 px-1.5 py-0.5 rounded">{{ $pDitolak }}%</span>
-                                </div>
-                                <div class="text-3xl font-extrabold text-rose-700 mt-2">{{ number_format($st['selesai_ditolak']) }}</div>
-                            </div>
-                            <div class="mt-3 pt-3 border-t border-rose-100 text-[11px] text-rose-700/80 flex items-center justify-between">
-                                <span>Ditolak pasca-proses</span>
-                                <span class="font-semibold">{{ $st['selesai_ditolak'] }} lap</span>
+                                <span class="font-semibold">{{ $st['selesai'] }} lap</span>
                             </div>
                         </div>
                     </div>
@@ -479,11 +447,14 @@
                                 </td>
                                 <td class="py-3.5 px-4 whitespace-nowrap">
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold
-                                        @if(in_array($lap->status, ['diajukan', 'menunggu'])) bg-amber-100 text-amber-800
+                                        @if($lap->status === 'belum_verifikasi') bg-rose-100 text-rose-800 border border-rose-200/60
+                                        @elseif(in_array($lap->status, ['diajukan', 'menunggu', 'verifikasi'])) bg-amber-100 text-amber-800
                                         @elseif($lap->status === 'diproses') bg-blue-100 text-blue-800
-                                        @elseif($lap->status === 'selesai' && $lap->sub_status === 'selesai_ditolak') bg-rose-100 text-rose-800
                                         @elseif($lap->status === 'selesai') bg-emerald-100 text-emerald-800
                                         @else bg-slate-100 text-slate-800 @endif">
+                                        @if($lap->status === 'belum_verifikasi')
+                                            <span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse mr-1.5"></span>
+                                        @endif
                                         {{ $lap->status_label }}
                                     </span>
                                 </td>

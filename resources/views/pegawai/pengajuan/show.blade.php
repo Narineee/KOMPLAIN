@@ -1,388 +1,283 @@
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="h-full bg-slate-50">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Detail Pengaduan #{{ $pengajuan->id }} - KOMPLAIN</title>
+@extends('layouts.pengadu')
 
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700" rel="stylesheet" />
+@section('title', 'Detail pengaduan')
+@section('back_url', route('pegawai.pengajuan.index'))
+@section('back_title', 'Detail pengaduan')
 
-    <!-- Scripts & Styles via Vite -->
-    @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
-    @else
-        <script src="https://cdn.tailwindcss.com"></script>
-    @endif
-</head>
-<body class="min-h-full flex flex-col text-slate-800 antialiased selection:bg-blue-500 selection:text-white">
-    <!-- Navbar Pengadu -->
-    <nav class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16">
-                <div class="flex items-center gap-3">
-                    <a href="{{ route('pegawai.dashboard') }}" class="flex items-center gap-2">
-                        <div class="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-lg text-white">
-                            K
-                        </div>
-                        <div>
-                            <span class="font-bold text-base leading-tight block text-slate-900">KOMPLAIN</span>
-                            <span class="text-[10px] text-blue-600 block font-semibold uppercase tracking-wider">Portal Pengadu</span>
-                        </div>
-                    </a>
+@section('content')
+@php
+    use Illuminate\Support\Str;
 
-                    <div class="hidden sm:flex items-center gap-2 ml-6">
-                        <a href="{{ route('pegawai.dashboard') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
-                            Daftar Aduan Saya
-                        </a>
-                        <a href="{{ route('pegawai.pengajuan.create') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
-                            + Buat Pengaduan Baru
-                        </a>
-                    </div>
-                </div>
+    $p = $pengajuan;
+    $kartu = 'rounded-2xl border border-slate-200 bg-white p-5 shadow-sm';
+    $judulKartu = 'text-lg font-bold text-slate-900';
+    $tz = $p->created_at->format('T');
 
-                <div class="flex items-center gap-4">
-                    <div class="text-right hidden sm:block">
-                        <span class="block text-xs font-semibold text-slate-800">{{ auth()->user()->name }}</span>
-                        <span class="block text-[10px] text-slate-500">Pengadu / Pegawai (NIP: {{ auth()->user()->nip ?? '-' }})</span>
-                    </div>
+    $selesai = in_array($p->status, ['selesai', 'ditolak'], true);
 
-                    <form action="{{ route('logout') }}" method="POST" class="inline">
-                        @csrf
-                        <button type="submit" class="py-1.5 px-3 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-700 transition">
-                            Keluar
-                        </button>
-                    </form>
+    // Langkah aktif pada daftar progres (1-5)
+    if (in_array($p->status, ['menunggu', 'diajukan', 'verifikasi'], true)) {
+        $langkah = 1;
+    } elseif (in_array($p->status, ['diproses', 'proses'], true)) {
+        $langkah = match ($p->sub_status) {
+            'rencana_aksi' => 3,
+            'aksi' => 4,
+            default => 2,
+        };
+    } elseif ($selesai) {
+        $langkah = 5;
+    } else {
+        $langkah = 1;
+    }
+
+    $daftarLangkah = [
+        1 => 'Verifikasi',
+        2 => 'Identifikasi / Klarifikasi (Analisis masalah)',
+        3 => 'Rencana aksi (Penyusunan solusi)',
+        4 => 'Aksi (Tindakan lapangan)',
+        5 => 'Selesai',
+    ];
+
+    // Waktu tiap langkah diambil dari riwayat status
+    $nomorLangkah = function (?string $st, ?string $sub): ?int {
+        if (in_array($st, ['menunggu', 'diajukan', 'verifikasi'], true)) return 1;
+        if (in_array($st, ['diproses', 'proses'], true)) {
+            return match ($sub) { 'rencana_aksi' => 3, 'aksi' => 4, default => 2 };
+        }
+        if (in_array($st, ['selesai', 'ditolak'], true)) return 5;
+        return null;
+    };
+
+    $riwayat = $p->riwayatStatuses->sortBy('created_at');
+    $waktuLangkah = [];
+    foreach ($riwayat as $r) {
+        if ($r->status_sebelumnya === 'selesai' && $r->status_baru === 'selesai') continue; // konfirmasi pelapor
+        $n = $nomorLangkah($r->status_baru, $r->sub_status_baru);
+        if ($n) $waktuLangkah[$n] = $r->created_at;
+    }
+
+    // Catatan admin saat menandai selesai
+    $hasil = $riwayat->sortByDesc('created_at')->first(
+        fn ($r) => $r->status_baru === 'selesai' && $r->status_sebelumnya !== 'selesai' && filled($r->catatan)
+    )?->catatan;
+
+    // Banner status (kelas ditulis utuh agar tidak terbuang oleh purge Tailwind)
+    $tglSelesai = $p->tanggal_selesai?->locale('id')->translatedFormat('d F Y');
+    if ($p->perlu_konfirmasi) {
+        $banner = ['bg-amber-50 border-amber-200', 'text-amber-700', 'text-amber-800', 'M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z',
+            'Sudah ditangani, apakah sudah sesuai?',
+            'Admin menandai aduan selesai pada '.($tglSelesai ?? 'tanggal yang tercatat').'. Penyelesaian belum Anda konfirmasi. Periksa hasilnya sebelum memilih tindakan.'];
+    } elseif ($selesai) {
+        $banner = ['bg-emerald-50 border-emerald-200', 'text-emerald-700', 'text-emerald-800', 'M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+            $p->sub_status === 'selesai_setelah_tinjau_ulang' ? 'Selesai setelah tinjau ulang' : 'Aduan sudah selesai ditangani',
+            $p->sub_status === 'selesai_setelah_tinjau_ulang'
+                ? 'Admin telah menyelesaikan penanganan setelah proses tinjau ulang.'
+                : ($p->konfirmasi_pelapor === 'dikonfirmasi' && $p->dikonfirmasi_pada
+                    ? 'Anda mengonfirmasi penyelesaian pada '.$p->dikonfirmasi_pada->locale('id')->translatedFormat('d F Y').'.'
+                    : null)];
+    } elseif ($p->status === 'belum_verifikasi') {
+        $banner = ['bg-rose-50 border-rose-200', 'text-rose-700', 'text-rose-800', 'M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z',
+            'Menunggu Verifikasi Admin', 'Aduan Anda telah diajukan dan belum dibuka/diverifikasi oleh tim admin.'];
+    } elseif ($langkah === 1) {
+        $banner = ['bg-amber-50 border-amber-200', 'text-amber-700', 'text-amber-800', 'M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z',
+            'Aduan Anda sedang diverifikasi', 'Admin telah membuka dan sedang memeriksa kelengkapan aduan sebelum diproses.'];
+    } else {
+        $banner = ['bg-blue-50 border-blue-100', 'text-blue-700', 'text-blue-800', 'M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z',
+            'Aduan Anda sedang ditangani', null];
+    }
+
+    $ukuran = fn ($b) => $b >= 1048576
+        ? number_format($b / 1048576, 1, ',', '.').' MB'
+        : max(1, round($b / 1024)).' KB';
+
+    $inisial = fn ($nama) => Str::of($nama ?? 'A')->trim()->explode(' ')->filter()->take(2)
+        ->map(fn ($k) => Str::upper(Str::substr($k, 0, 1)))->implode('');
+
+    $isDitinjauUlang = ($p->konfirmasi_pelapor === 'keberatan')
+        || ($p->sub_status === 'selesai_setelah_tinjau_ulang')
+        || (($p->jumlah_keberatan ?? 0) > 0);
+@endphp
+
+@if ($isDitinjauUlang)
+    @include('pegawai.pengajuan.partials.detail-ditinjau-ulang')
+@else
+<div class="max-w-2xl mx-auto space-y-4">
+
+    <div>
+        <div class="flex items-start justify-between gap-4">
+            <div>
+                <h1 class="text-2xl font-bold leading-snug text-slate-900">{{ $p->kategori?->nama_kategori ?? 'Pengaduan #'.$p->id }}</h1>
+                <div class="mt-3 flex flex-wrap items-center gap-2">
+                    <x-pengadu.status-chip :pengajuan="$p" />
+                    @if ($p->is_anonim)
+                        <span class="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700">Anonim</span>
+                    @endif
                 </div>
             </div>
-        </div>
-    </nav>
-
-    <!-- Main Content -->
-    <main class="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <!-- Breadcrumb / Tombol Kembali -->
-        <div class="mb-6">
-            <a href="{{ route('pegawai.dashboard') }}" class="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold text-blue-600 hover:text-blue-800 transition">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            <a href="{{ route('pegawai.pengajuan.pdf', $p) }}"
+               target="_blank"
+               class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition shadow-xs shrink-0">
+                <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                Kembali ke Histori Aduan
+                Cetak Bukti (PDF)
             </a>
         </div>
+        <p class="mt-3 text-sm text-slate-500">
+            Diajukan {{ $p->created_at->locale('id')->translatedFormat('d F Y · H.i') }} {{ $tz }} · #{{ $p->id }}
+        </p>
+    </div>
 
-        @php
-            $isSelesaiDitolak = ($pengajuan->status === 'selesai' && $pengajuan->sub_status === 'selesai_ditolak') || $pengajuan->status === 'ditolak';
+    <!-- Banner status -->
+    <div class="flex gap-3 rounded-2xl border p-4 {{ $banner[0] }}">
+        <svg class="h-6 w-6 shrink-0 {{ $banner[1] }}" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="{{ $banner[3] }}" />
+        </svg>
+        <div>
+            <p class="text-sm font-bold {{ $banner[2] }}">{{ $banner[4] }}</p>
+            @if ($banner[5])
+                <p class="mt-1 text-[13px] leading-relaxed text-slate-700">{{ $banner[5] }}</p>
+            @endif
+        </div>
+    </div>
 
-            if (in_array($pengajuan->status, ['diajukan', 'menunggu'])) {
-                $currentStep = 1;
-            } elseif ($pengajuan->status === 'diproses' || $pengajuan->status === 'proses') {
-                $currentStep = match($pengajuan->sub_status) {
-                    'identifikasi' => 2,
-                    'klarifikasi' => 3,
-                    'rencana_aksi' => 4,
-                    'aksi' => 5,
-                    default => 2,
-                };
-            } elseif ($pengajuan->status === 'selesai') {
-                $currentStep = 6;
-            } else {
-                $currentStep = 1;
-            }
+    <!-- Hasil tindak lanjut -->
+    @if ($selesai && $hasil)
+        <section class="{{ $kartu }}">
+            <h2 class="{{ $judulKartu }}">Hasil tindak lanjut</h2>
+            <p class="mt-3 whitespace-pre-line text-[15px] leading-relaxed text-slate-800">{{ $hasil }}</p>
+        </section>
+    @endif
 
-            $stepperItems = [
-                1 => ['label' => 'Verifikasi', 'desc' => 'Validasi berkas'],
-                2 => ['label' => 'Identifikasi', 'desc' => 'Analisis masalah'],
-                3 => ['label' => 'Klarifikasi', 'desc' => 'Konfirmasi pihak'],
-                4 => ['label' => 'Rencana Aksi', 'desc' => 'Penyusunan solusi'],
-                5 => ['label' => 'Aksi', 'desc' => 'Tindakan lapangan'],
-                6 => [
-                    'label' => $isSelesaiDitolak ? 'Selesai Ditolak' : 'Selesai Ditangani',
-                    'desc' => $isSelesaiDitolak ? 'Tidak dapat ditindaklanjuti' : 'Solusi berhasil diterapkan'
-                ],
-            ];
-        @endphp
+    <!-- Konfirmasi dari pelapor -->
+    @include('pegawai.pengajuan.partials.konfirmasi')
 
-        <!-- Visual Stepper: Alur Progress Penanganan Aduan -->
-        <div class="mb-6 bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 sm:p-7">
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-6">
-                <div>
-                    <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                        <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                        </svg>
-                        Alur &amp; Tahapan Penanganan Aduan
-                    </h2>
-                    <p class="text-xs text-slate-500 mt-0.5">Pantau secara transparan tahapan proses tindak lanjut yang sedang berjalan.</p>
-                </div>
-                <div class="text-xs font-semibold">
-                    @if ($isSelesaiDitolak)
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
-                            <span class="w-2 h-2 rounded-full bg-rose-500"></span>
-                            Status Akhir: Selesai Ditolak
-                        </span>
-                    @elseif ($currentStep === 6)
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                            Status Akhir: Selesai Ditangani
-                        </span>
-                    @else
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-                            <span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
-                            Tahap {{ $currentStep }} dari 6: {{ $stepperItems[$currentStep]['label'] }}
-                        </span>
-                    @endif
-                </div>
+    <!-- Rincian -->
+    <section class="{{ $kartu }}">
+        <h2 class="{{ $judulKartu }}">Rincian aduan</h2>
+        <dl class="mt-4 space-y-4">
+            <div>
+                <dt class="text-xs text-slate-500">Klasifikasi</dt>
+                <dd class="mt-0.5 text-[15px] font-semibold text-slate-900">{{ $p->nama_kategori_lengkap }}</dd>
             </div>
-
-            <!-- Stepper Bar Horizontal -->
-            <div class="relative">
-                <!-- Connector Line Desktop -->
-                <div class="hidden md:block absolute top-4 left-6 right-6 h-1 bg-slate-100 -z-0">
-                    <div class="h-full bg-blue-600 transition-all duration-500"
-                         style="width: {{ $currentStep === 1 ? '0%' : (($currentStep - 1) / 5) * 100 . '%' }};"></div>
+            <div>
+                <dt class="text-xs text-slate-500">Pengadu</dt>
+                <dd class="mt-0.5 text-[15px] font-semibold text-slate-900">
+                    {{ $p->user?->name ?? '-' }}{{ $p->user?->unit ? ' · '.$p->user->unit->nama_unit : '' }}
+                </dd>
+                @if ($p->is_anonim)
+                    <dd class="mt-1 text-xs text-slate-500">Dikirim sebagai anonim. Nama Anda disembunyikan dari tampilan admin.</dd>
+                @endif
+            </div>
+            <div>
+                <dt class="sr-only">Uraian</dt>
+                <dd class="whitespace-pre-line text-[15px] leading-relaxed text-slate-800">{{ $p->deskripsi ?? $p->isi_laporan }}</dd>
+            </div>
+            @if ($p->saran_penyelesaian)
+                <div>
+                    <dt class="text-xs text-slate-500">Saran / rekomendasi solusi</dt>
+                    <dd class="mt-0.5 whitespace-pre-line text-[15px] font-semibold text-slate-900">{{ $p->saran_penyelesaian }}</dd>
                 </div>
+            @endif
+        </dl>
+    </section>
 
-                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 relative z-10">
-                    @foreach ($stepperItems as $stepNum => $step)
-                        @php
-                            $isPassed = $stepNum < $currentStep;
-                            $isCurrent = $stepNum === $currentStep;
-                            $isFuture = $stepNum > $currentStep;
-                        @endphp
-                        <div class="flex flex-col items-center text-center">
-                            <!-- Circle Node -->
-                            <div class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all shadow-xs mb-2
-                                @if($isPassed) bg-blue-600 text-white ring-4 ring-blue-50
-                                @elseif($isCurrent)
-                                    @if($isSelesaiDitolak && $stepNum === 6) bg-rose-600 text-white ring-4 ring-rose-100 animate-pulse
-                                    @elseif($currentStep === 6 && $stepNum === 6) bg-emerald-600 text-white ring-4 ring-emerald-100
-                                    @else bg-blue-600 text-white ring-4 ring-blue-200 animate-pulse @endif
-                                @else bg-slate-100 text-slate-400 border border-slate-200 @endif">
-                                @if ($isPassed)
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-                                    </svg>
-                                @elseif ($isCurrent && $isSelesaiDitolak && $stepNum === 6)
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                @elseif ($isCurrent && $currentStep === 6)
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-                                    </svg>
+    <!-- Lampiran -->
+    @if ($p->lampirans->isNotEmpty())
+        <section class="{{ $kartu }}">
+            <h2 class="{{ $judulKartu }}">Lampiran · {{ $p->lampirans->count() }} berkas</h2>
+            <div class="mt-4 space-y-4">
+                @foreach ($p->lampirans as $l)
+                    @php
+                        $url = asset('storage/'.$l->path);
+                        $ext = strtolower($l->ekstensi ?: pathinfo($l->nama_file, PATHINFO_EXTENSION));
+                        $gambar = in_array($ext, ['jpg', 'jpeg', 'png'], true);
+                    @endphp
+                    <div>
+                        @if ($gambar)
+                            <a href="{{ $url }}" target="_blank" rel="noopener">
+                                <img src="{{ $url }}" alt="{{ $l->nama_file }}" loading="lazy" class="h-48 w-full rounded-xl object-cover">
+                            </a>
+                        @endif
+                        <a href="{{ $url }}" target="_blank" rel="noopener" class="mt-2 flex items-center gap-2.5 text-sm hover:text-blue-600">
+                            <svg class="h-5 w-5 shrink-0 text-slate-600" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true">
+                                @if ($gambar)
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.41a2.25 2.25 0 013.182 0l2.909 2.91m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
                                 @else
-                                    {{ $stepNum }}
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
                                 @endif
-                            </div>
-
-                            <!-- Label & Desc -->
-                            <span class="text-xs font-bold block
-                                @if($isPassed) text-slate-800
-                                @elseif($isCurrent)
-                                    @if($isSelesaiDitolak && $stepNum === 6) text-rose-600
-                                    @elseif($currentStep === 6 && $stepNum === 6) text-emerald-600
-                                    @else text-blue-600 @endif
-                                @else text-slate-400 @endif">
-                                {{ $step['label'] }}
-                            </span>
-                            <span class="text-[10px] text-slate-400 block mt-0.5 leading-tight">
-                                {{ $step['desc'] }}
-                            </span>
-
-                            @if ($isCurrent)
-                                <span class="mt-1.5 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider
-                                    @if($isSelesaiDitolak && $stepNum === 6) bg-rose-100 text-rose-800
-                                    @elseif($currentStep === 6 && $stepNum === 6) bg-emerald-100 text-emerald-800
-                                    @else bg-blue-100 text-blue-800 @endif">
-                                    Aktif
-                                </span>
+                            </svg>
+                            <span class="min-w-0 flex-1 truncate font-medium text-slate-800">{{ $l->nama_file }}</span>
+                            @if ($l->ukuran_file)
+                                <span class="shrink-0 text-xs text-slate-500">{{ $ukuran($l->ukuran_file) }}</span>
                             @endif
-                        </div>
-                    @endforeach
-                </div>
-            </div>
-
-            <!-- Keterangan Tahap Aktif -->
-            <div class="mt-6 pt-4 border-t border-slate-100 flex items-start gap-2.5 text-xs text-slate-600 bg-slate-50 p-3.5 rounded-xl border border-slate-100">
-                <svg class="w-4 h-4 text-blue-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <div>
-                    @if ($currentStep === 1)
-                        <span class="font-bold text-slate-800">Tahap Verifikasi:</span>
-                        Laporan pengaduan Anda telah diterima dalam sistem dan sedang diperiksa oleh administrator sebelum masuk ke penanganan substantif.
-                    @elseif ($currentStep === 2)
-                        <span class="font-bold text-slate-800">Tahap Proses - Identifikasi Masalah:</span>
-                        Tim administrator sedang melakukan identifikasi fakta lapangan dan menganalisis pokok permasalahan aduan.
-                    @elseif ($currentStep === 3)
-                        <span class="font-bold text-slate-800">Tahap Proses - Klarifikasi Pihak Terkait:</span>
-                        Tim sedang mengumpulkan keterangan dan klarifikasi dari pihak/unit terkait perihal masalah yang dilaporkan.
-                    @elseif ($currentStep === 4)
-                        <span class="font-bold text-slate-800">Tahap Proses - Rencana Aksi Solusi:</span>
-                        Tim sedang merumuskan langkah penanganan konkrit dan rencana aksi untuk menuntaskan kendala tersebut.
-                    @elseif ($currentStep === 5)
-                        <span class="font-bold text-slate-800">Tahap Proses - Pelaksanaan Aksi:</span>
-                        Tindakan dan eksekusi perbaikan sedang dilaksanakan secara langsung di lapangan/lingkungan kerja.
-                    @elseif ($currentStep === 6 && $isSelesaiDitolak)
-                        <span class="font-bold text-rose-800">Hasil Selesai Ditolak:</span>
-                        Laporan telah melalui proses evaluasi dan diputuskan tidak dapat ditindaklanjuti. Silakan periksa catatan dan riwayat di bawah untuk rincian alasan penolakan.
-                    @else
-                        <span class="font-bold text-emerald-800">Hasil Selesai Ditangani:</span>
-                        Laporan telah selesai ditangani dengan sukses. Segala tindakan perbaikan telah selesai dilaksanakan. Terima kasih atas partisipasi Anda.
-                    @endif
-                </div>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <!-- Kolom Kiri: Rincian Aduan -->
-            <div class="lg:col-span-2 space-y-6">
-                <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 sm:p-8">
-                    <div class="flex flex-wrap items-center justify-between gap-3 mb-4 pb-4 border-b border-slate-100">
-                        <div>
-                            <span class="text-xs font-semibold uppercase tracking-wider text-slate-400 block">ID Pengaduan</span>
-                            <span class="font-mono text-lg font-bold text-blue-700">#{{ $pengajuan->id }}</span>
-                        </div>
-                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold
-                            @if(in_array($pengajuan->status, ['diajukan', 'menunggu'])) bg-amber-100 text-amber-800
-                            @elseif($pengajuan->status === 'diproses') bg-blue-100 text-blue-800
-                            @elseif($pengajuan->status === 'selesai' && $pengajuan->sub_status === 'selesai_ditolak') bg-rose-100 text-rose-800
-                            @elseif($pengajuan->status === 'selesai') bg-emerald-100 text-emerald-800
-                            @else bg-slate-100 text-slate-800 @endif">
-                            Status: {{ $pengajuan->status_label }}
-                        </span>
+                        </a>
                     </div>
+                @endforeach
+            </div>
+        </section>
+    @endif
 
-                    <h1 class="text-xl sm:text-2xl font-bold text-slate-900 mb-4">Pengaduan #{{ $pengajuan->id }}</h1>
-
-                    <div class="space-y-4">
-                        <div>
-                            <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Uraian Pengaduan</h3>
-                            <div class="text-sm text-slate-700 leading-relaxed whitespace-pre-line bg-slate-50 p-4 rounded-xl border border-slate-100">
-                                {{ $pengajuan->deskripsi ?? $pengajuan->isi_laporan }}
-                            </div>
-                        </div>
-
-                        @if ($pengajuan->saran_penyelesaian)
-                            <div>
-                                <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Saran / Rekomendasi Solusi</h3>
-                                <div class="text-sm text-slate-700 leading-relaxed whitespace-pre-line bg-blue-50/50 p-4 rounded-xl border border-blue-100">
-                                    {{ $pengajuan->saran_penyelesaian }}
-                                </div>
-                            </div>
+    <!-- Progres -->
+    <section class="{{ $kartu }}">
+        <h2 class="{{ $judulKartu }}">Progres pengaduan</h2>
+        <ol class="mt-4 space-y-4">
+            @foreach ($daftarLangkah as $no => $nama)
+                @php $tercapai = $no <= $langkah; @endphp
+                <li class="flex items-start gap-3">
+                    <span @class([
+                        'mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full',
+                        'bg-blue-50 text-blue-700 border border-blue-200' => $tercapai,
+                        'border-2 border-slate-300 bg-white' => ! $tercapai,
+                    ])>
+                        @if ($tercapai)
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                            </svg>
                         @endif
+                    </span>
+                    <div>
+                        <p @class(['text-sm font-bold', 'text-slate-900' => $tercapai, 'text-slate-500' => ! $tercapai])>{{ $nama }}</p>
+                        <p class="mt-0.5 text-xs text-slate-500">
+                            @if ($tercapai)
+                                {{ isset($waktuLangkah[$no]) ? $waktuLangkah[$no]->locale('id')->translatedFormat('d M · H.i') : '-' }}
+                            @else
+                                Menunggu tindak lanjut
+                            @endif
+                        </p>
+                    </div>
+                </li>
+            @endforeach
+        </ol>
+    </section>
 
-                        @if ($pengajuan->lampirans && $pengajuan->lampirans->count() > 0)
-                            <div>
-                                <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Lampiran Berkas</h3>
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                    @foreach ($pengajuan->lampirans as $lampiran)
-                                        <div class="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-50 text-xs">
-                                            <span class="truncate font-medium text-slate-700">{{ $lampiran->nama_file }}</span>
-                                            <a href="{{ asset('storage/' . ($lampiran->path_file ?? $lampiran->path)) }}" target="_blank" class="ml-2 font-semibold text-blue-600 hover:text-blue-800 shrink-0">
-                                                Unduh ↗
-                                            </a>
-                                        </div>
-                                    @endforeach
-                                </div>
-                            </div>
-                        @endif
+    <!-- Tanggapan admin -->
+    <section class="{{ $kartu }}">
+        <h2 class="{{ $judulKartu }}">Tanggapan admin</h2>
+
+        @forelse ($p->tanggapans as $t)
+            @php $namaAdmin = $t->user?->name ?? 'Tim Administrator'; @endphp
+            <div class="mt-4 rounded-2xl bg-slate-50 border border-slate-200/80 p-4">
+                <div class="flex items-center gap-3">
+                    <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white" aria-hidden="true">{{ $inisial($namaAdmin) }}</span>
+                    <div>
+                        <p class="text-sm font-bold text-slate-900">{{ $namaAdmin }}</p>
+                        <p class="text-xs text-slate-500">Admin{{ $t->user?->unit ? ' · '.$t->user->unit->nama_unit : '' }}</p>
                     </div>
                 </div>
-
-                <!-- Bagian Tanggapan Admin -->
-                <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 sm:p-8">
-                    <h2 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-                        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                        </svg>
-                        Tanggapan & Tindak Lanjut Admin
-                    </h2>
-
-                    @if ($pengajuan->tanggapans && $pengajuan->tanggapans->count() > 0)
-                        <div class="space-y-4">
-                            @foreach ($pengajuan->tanggapans as $tanggapan)
-                                <div class="p-4 rounded-xl bg-slate-50 border border-slate-200/70 text-xs sm:text-sm">
-                                    <div class="flex items-center justify-between mb-2">
-                                        <span class="font-bold text-slate-800">{{ $tanggapan->user->name ?? 'Tim Administrator' }}</span>
-                                        <span class="text-slate-400 text-[11px]">{{ $tanggapan->created_at->format('d M Y, H:i') }}</span>
-                                    </div>
-                                    <p class="text-slate-700 whitespace-pre-line">{{ $tanggapan->isi_tanggapan ?? $tanggapan->pesan }}</p>
-                                </div>
-                            @endforeach
-                        </div>
-                    @else
-                        <div class="text-center py-6 text-slate-400 text-xs sm:text-sm">
-                            Belum ada tanggapan resmi dari tim admin untuk laporan ini.
-                        </div>
-                    @endif
-                </div>
+                <p class="mt-3 whitespace-pre-line text-[15px] leading-relaxed text-slate-800">{{ $t->isi_tanggapan ?? $t->pesan }}</p>
+                <p class="mt-3 text-xs text-slate-500">{{ $t->created_at->locale('id')->translatedFormat('d M Y · H.i') }} {{ $tz }}</p>
             </div>
+        @empty
+            <p class="mt-3 text-sm text-slate-500">Belum ada tanggapan dari admin.</p>
+        @endforelse
 
-            <!-- Kolom Kanan: Metadata & Riwayat Status -->
-            <div class="space-y-6">
-                <!-- Metadata Box -->
-                <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6">
-                    <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Informasi Laporan</h2>
-                    <dl class="space-y-3 text-xs sm:text-sm">
-                        <div>
-                            <dt class="text-slate-400 font-medium">Klasifikasi</dt>
-                            <dd class="text-slate-800 font-semibold mt-0.5">{{ $pengajuan->nama_kategori_lengkap }}</dd>
-                            @if ($pengajuan->kategori?->keterangan)
-                                <p class="text-[11px] text-slate-500 mt-1 italic leading-relaxed">
-                                    {{ $pengajuan->kategori->keterangan }}
-                                </p>
-                            @endif
-                        </div>
-                        <div>
-                            <dt class="text-slate-400 font-medium">Waktu Pengajuan</dt>
-                            <dd class="text-slate-800 font-semibold mt-0.5">{{ $pengajuan->created_at->format('d F Y, H:i') }} WIB</dd>
-                        </div>
-                        <div>
-                            <dt class="text-slate-400 font-medium">Mode Identitas</dt>
-                            <dd class="text-slate-800 font-semibold mt-0.5">
-                                {{ ($pengajuan->metode_identitas === 'anonim' || $pengajuan->is_anonim) ? 'Anonim' : 'Dengan Identitas Pegawai' }}
-                            </dd>
-                        </div>
-                    </dl>
-                </div>
+        <p class="mt-4 text-xs leading-relaxed text-slate-500">Notifikasi dikirim saat ada perubahan status atau tanggapan baru.</p>
+    </section>
 
-                <!-- Riwayat Status Timeline -->
-                <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6">
-                    <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">Riwayat Penanganan</h2>
-                    @if ($pengajuan->riwayatStatuses && $pengajuan->riwayatStatuses->count() > 0)
-                        <div class="relative pl-6 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
-                            @foreach ($pengajuan->riwayatStatuses as $riwayat)
-                                <div class="relative">
-                                    <div class="absolute -left-6 top-1.5 w-2.5 h-2.5 rounded-full
-                                        @if($riwayat->status_baru === 'selesai' && $riwayat->sub_status_baru === 'selesai_ditolak') bg-rose-500
-                                        @elseif($riwayat->status_baru === 'selesai') bg-emerald-500
-                                        @elseif($riwayat->status_baru === 'diproses') bg-blue-500
-                                        @else bg-amber-500 @endif ring-4 ring-white"></div>
-                                    <div class="text-xs">
-                                        <span class="font-bold text-slate-900 block">{{ $riwayat->status_lengkap_baru }}</span>
-                                        @if ($riwayat->status_sebelumnya)
-                                            <span class="text-[10px] text-slate-400 block">Sebelumnya: {{ $riwayat->status_lengkap_sebelumnya }}</span>
-                                        @endif
-                                        @if ($riwayat->catatan)
-                                            <p class="text-slate-600 mt-1 bg-slate-50 p-2 rounded-lg border border-slate-100">{{ $riwayat->catatan }}</p>
-                                        @endif
-                                        <span class="text-[10px] text-slate-400 block mt-1">{{ $riwayat->created_at->format('d M Y, H:i') }} WIB</span>
-                                    </div>
-                                </div>
-                            @endforeach
-                        </div>
-                    @else
-                        <p class="text-xs text-slate-400 text-center py-4">Belum ada pembaruan status.</p>
-                    @endif
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-400 mt-10">
-        Portal Pengadu KOMPLAIN &copy; {{ date('Y') }}
-    </footer>
-</body>
-</html>
+    <p class="pt-1 text-center text-xs text-slate-500">
+        Terakhir diperbarui {{ $p->updated_at->locale('id')->translatedFormat('d F Y · H.i') }} {{ $tz }}
+    </p>
+</div>
+@endif
+@endsection

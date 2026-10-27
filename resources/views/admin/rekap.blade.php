@@ -16,35 +16,6 @@
         <script src="https://cdn.tailwindcss.com"></script>
     @endif
 
-    <style>
-        @media print {
-            .no-print {
-                display: none !important;
-            }
-            .print-only {
-                display: block !important;
-            }
-            body {
-                background-color: #ffffff !important;
-                color: #0f172a !important;
-            }
-            .card-print {
-                border: 1px solid #cbd5e1 !important;
-                box-shadow: none !important;
-                break-inside: avoid;
-            }
-            table {
-                font-size: 11px !important;
-                width: 100% !important;
-            }
-            th, td {
-                padding: 6px 8px !important;
-            }
-        }
-        .print-only {
-            display: none;
-        }
-    </style>
 </head>
 <body class="min-h-full flex flex-col text-slate-800 antialiased selection:bg-indigo-500 selection:text-white">
     <!-- Navbar Admin (Disembunyikan saat dicetak) -->
@@ -100,28 +71,8 @@
 
     <!-- Main Content -->
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <!-- Print Header (Hanya tampil saat dicetak) -->
-        <div class="print-only mb-6 border-b-2 border-slate-900 pb-4">
-            <div class="text-center">
-                <h1 class="text-xl font-bold uppercase tracking-wider text-slate-900">SISTEM INFORMASI PENGADUAN LAYANAN (KOMPLAIN)</h1>
-                <h2 class="text-base font-semibold text-slate-800 mt-1">LAPORAN REKAPITULASI PENGADUAN</h2>
-                <p class="text-xs text-slate-600 mt-1">
-                    Periode:
-                    {{ !empty($filter['dari_tanggal']) ? \Carbon\Carbon::parse($filter['dari_tanggal'])->translatedFormat('d F Y') : 'Awal' }}
-                    s/d
-                    {{ !empty($filter['sampai_tanggal']) ? \Carbon\Carbon::parse($filter['sampai_tanggal'])->translatedFormat('d F Y') : 'Sekarang' }}
-                    @if(!empty($filter['status']))
-                        &bull; Status: {{ ucfirst($filter['status']) }}
-                    @endif
-                </p>
-                <p class="text-[11px] text-slate-500 mt-0.5">
-                    Dicetak pada: {{ now()->translatedFormat('d F Y, H:i') }} | Dicetak oleh: {{ auth()->user()->name ?? auth()->user()->nama }}
-                </p>
-            </div>
-        </div>
-
         <!-- Page Header (Web Screen) -->
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 no-print">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
             <div>
                 <h1 class="text-2xl font-bold text-slate-900">Rekapitulasi & Laporan Pengaduan</h1>
                 <p class="text-xs sm:text-sm text-slate-500 mt-0.5">
@@ -133,22 +84,14 @@
                     <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                     <span id="live-clock" class="font-mono text-xs">--:--:-- WIB</span>
                 </div>
-                <button type="button"
-                        onclick="window.print()"
-                        class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white transition shadow-sm">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                    </svg>
-                    Cetak / Simpan PDF
-                </button>
-                <button type="button"
-                        onclick="exportRekapToCSV()"
-                        class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition shadow-sm">
+                <a href="{{ route('admin.rekap.pdf', request()->query()) }}"
+                   target="_blank"
+                   class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white transition shadow-sm">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
-                    Ekspor Excel/CSV
-                </button>
+                    Cetak PDF 
+                </a>
             </div>
         </div>
 
@@ -191,14 +134,14 @@
                     <label class="block text-xs font-semibold text-slate-600 mb-1">Status Pengaduan</label>
                     <select name="status" class="w-full text-xs rounded-xl border border-slate-300 px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600">
                         <option value="">-- Semua Status --</option>
+                        <option value="belum_verifikasi" {{ ($filter['status'] ?? '') === 'belum_verifikasi' ? 'selected' : '' }}>Belum Diverifikasi</option>
                         <option value="verifikasi" {{ in_array($filter['status'] ?? '', ['verifikasi', 'diajukan', 'menunggu']) ? 'selected' : '' }}>Verifikasi</option>
                         <option value="diproses" {{ ($filter['status'] ?? '') === 'diproses' ? 'selected' : '' }}>Sedang Diproses (Semua Tahap)</option>
-                        <option value="identifikasi" {{ ($filter['status'] ?? '') === 'identifikasi' ? 'selected' : '' }}>&nbsp;&nbsp;↳ Diproses: Identifikasi</option>
-                        <option value="klarifikasi" {{ ($filter['status'] ?? '') === 'klarifikasi' ? 'selected' : '' }}>&nbsp;&nbsp;↳ Diproses: Klarifikasi</option>
+                        <option value="identifikasi_klarifikasi" {{ in_array($filter['status'] ?? '', ['identifikasi_klarifikasi', 'identifikasi', 'klarifikasi']) ? 'selected' : '' }}>&nbsp;&nbsp;↳ Diproses: Identifikasi / Klarifikasi</option>
                         <option value="rencana_aksi" {{ ($filter['status'] ?? '') === 'rencana_aksi' ? 'selected' : '' }}>&nbsp;&nbsp;↳ Diproses: Rencana Aksi</option>
                         <option value="aksi" {{ ($filter['status'] ?? '') === 'aksi' ? 'selected' : '' }}>&nbsp;&nbsp;↳ Diproses: Aksi / Tindakan</option>
-                        <option value="selesai_ditangani" {{ ($filter['status'] ?? '') === 'selesai_ditangani' ? 'selected' : '' }}>Selesai Ditangani</option>
-                        <option value="selesai_ditolak" {{ in_array($filter['status'] ?? '', ['selesai_ditolak', 'ditolak']) ? 'selected' : '' }}>Selesai Ditolak</option>
+                        <option value="selesai" {{ in_array($filter['status'] ?? '', ['selesai', 'selesai_ditangani', 'selesai_ditolak', 'ditolak']) ? 'selected' : '' }}>Selesai (Semua)</option>
+                        <option value="selesai_setelah_tinjau_ulang" {{ ($filter['status'] ?? '') === 'selesai_setelah_tinjau_ulang' ? 'selected' : '' }}>&nbsp;&nbsp;↳ Selesai setelah tinjau ulang</option>
                     </select>
                 </div>
 
@@ -231,14 +174,14 @@
                         @endif
                     @endif
                     @if (!empty($filter['status']))
-                        <span class="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 font-medium">Status: {{ in_array($filter['status'], ['verifikasi', 'diajukan', 'menunggu']) ? 'Verifikasi' : ucfirst(str_replace('_', ' ', $filter['status'])) }}</span>
+                        <span class="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 font-medium">Status: {{ $filter['status'] === 'belum_verifikasi' ? 'Belum Diverifikasi' : (in_array($filter['status'], ['verifikasi', 'diajukan', 'menunggu']) ? 'Verifikasi' : ucfirst(str_replace('_', ' ', $filter['status']))) }}</span>
                     @endif
                 </div>
             @endif
         </div>
 
         <!-- Ringkasan Statistik Cards Grid -->
-        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5 mb-6">
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3.5 mb-6">
             <!-- Total Aduan -->
             <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm card-print">
                 <div class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Total Laporan</div>
@@ -260,21 +203,11 @@
                 <div class="text-[10px] text-blue-600/70 mt-1">Tahap tindak lanjut</div>
             </div>
 
-            <!-- Selesai Ditangani -->
+            <!-- Selesai -->
             <div class="bg-white p-4 rounded-2xl border border-emerald-200/80 shadow-sm bg-emerald-50/20 card-print">
-                <div class="text-[11px] font-semibold text-emerald-600 uppercase tracking-wider">Selesai Ditangani</div>
-                <div class="text-2xl sm:text-3xl font-extrabold text-emerald-700 mt-1">{{ $ringkasan['selesai_ditangani'] ?? 0 }}</div>
-                @php
-                    $persenDitangani = ($ringkasan['total'] ?? 0) > 0 ? round((($ringkasan['selesai_ditangani'] ?? 0) / $ringkasan['total']) * 100, 1) : 0;
-                @endphp
-                <div class="text-[10px] text-emerald-700/80 mt-1 font-medium">{{ $persenDitangani }}% terselesaikan</div>
-            </div>
-
-            <!-- Selesai Ditolak -->
-            <div class="bg-white p-4 rounded-2xl border border-rose-200/80 shadow-sm bg-rose-50/20 card-print">
-                <div class="text-[11px] font-semibold text-rose-600 uppercase tracking-wider">Selesai Ditolak</div>
-                <div class="text-2xl sm:text-3xl font-extrabold text-rose-700 mt-1">{{ $ringkasan['selesai_ditolak'] ?? 0 }}</div>
-                <div class="text-[10px] text-rose-600/70 mt-1">Ditolak pasca-proses</div>
+                <div class="text-[11px] font-semibold text-emerald-600 uppercase tracking-wider">Selesai</div>
+                <div class="text-2xl sm:text-3xl font-extrabold text-emerald-700 mt-1">{{ $ringkasan['selesai'] ?? 0 }}</div>
+                <div class="text-[10px] text-emerald-700/80 mt-1">Tuntas terselesaikan</div>
             </div>
 
             <!-- Anonim vs Beridentitas -->
@@ -302,7 +235,7 @@
                         <div>
                             <div class="flex justify-between items-center text-xs mb-1">
                                 <span class="font-medium text-slate-700">{{ $kat->nama_kategori ?? $kat->nama }}</span>
-                                <span class="font-bold text-slate-900">{{ $jumlahKat }} <span class="text-slate-400 font-normal">({{ $persenKat }}%)</span></span>
+                                <span class="font-bold text-slate-900">{{ $jumlahKat }} <span class="text-slate-400 font-normal">laporan</span></span>
                             </div>
                             <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
                                 <div class="bg-indigo-600 h-2 rounded-full transition-all" style="width: {{ $persenKat }}%"></div>
@@ -324,13 +257,12 @@
                             $pDiajukan = $totalLap > 0 ? round((($ringkasan['diajukan'] ?? 0) / $totalLap) * 100, 1) : 0;
                             $pDiproses = $totalLap > 0 ? round((($ringkasan['diproses'] ?? 0) / $totalLap) * 100, 1) : 0;
                             $pSelesai = $totalLap > 0 ? round((($ringkasan['selesai'] ?? 0) / $totalLap) * 100, 1) : 0;
-                            $pDitolak = $totalLap > 0 ? round((($ringkasan['ditolak'] ?? 0) / $totalLap) * 100, 1) : 0;
                         @endphp
 
                         <div>
                             <div class="flex justify-between text-xs mb-1">
                                 <span class="text-emerald-700 font-semibold">Terselesaikan (Selesai)</span>
-                                <span class="font-bold text-emerald-800">{{ $ringkasan['selesai'] ?? 0 }} ({{ $pSelesai }}%)</span>
+                                <span class="font-bold text-emerald-800">{{ $ringkasan['selesai'] ?? 0 }} laporan</span>
                             </div>
                             <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
                                 <div class="bg-emerald-500 h-2 rounded-full" style="width: {{ $pSelesai }}%"></div>
@@ -340,7 +272,7 @@
                         <div>
                             <div class="flex justify-between text-xs mb-1">
                                 <span class="text-amber-700 font-semibold">Sedang Diproses</span>
-                                <span class="font-bold text-amber-800">{{ $ringkasan['diproses'] ?? 0 }} ({{ $pDiproses }}%)</span>
+                                <span class="font-bold text-amber-800">{{ $ringkasan['diproses'] ?? 0 }} laporan</span>
                             </div>
                             <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
                                 <div class="bg-amber-500 h-2 rounded-full" style="width: {{ $pDiproses }}%"></div>
@@ -350,28 +282,18 @@
                         <div>
                             <div class="flex justify-between text-xs mb-1">
                                 <span class="text-blue-700 font-semibold">Menunggu / Diajukan</span>
-                                <span class="font-bold text-blue-800">{{ $ringkasan['diajukan'] ?? 0 }} ({{ $pDiajukan }}%)</span>
+                                <span class="font-bold text-blue-800">{{ $ringkasan['diajukan'] ?? 0 }} laporan</span>
                             </div>
                             <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
                                 <div class="bg-blue-500 h-2 rounded-full" style="width: {{ $pDiajukan }}%"></div>
-                            </div>
-                        </div>
-
-                        <div>
-                            <div class="flex justify-between text-xs mb-1">
-                                <span class="text-rose-700 font-semibold">Ditolak</span>
-                                <span class="font-bold text-rose-800">{{ $ringkasan['ditolak'] ?? 0 }} ({{ $pDitolak }}%)</span>
-                            </div>
-                            <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                                <div class="bg-rose-500 h-2 rounded-full" style="width: {{ $pDitolak }}%"></div>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <div class="mt-4 pt-3 border-t border-slate-100 text-[11px] text-slate-500 flex items-center justify-between">
-                    <span>Efektivitas Penyelesaian Aduan:</span>
-                    <span class="font-bold text-slate-800">{{ $pSelesai }}% Selesai Ditangani</span>
+                    <span>Total Selesai:</span>
+                    <span class="font-bold text-slate-800">{{ $ringkasan['selesai'] ?? 0 }} Laporan</span>
                 </div>
             </div>
         </div>
@@ -434,11 +356,14 @@
                                 </td>
                                 <td class="py-3.5 px-4 text-center whitespace-nowrap">
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold
-                                        @if(in_array($lap->status, ['diajukan', 'menunggu'])) bg-amber-100 text-amber-800
+                                        @if($lap->status === 'belum_verifikasi') bg-rose-100 text-rose-800 border border-rose-200/60
+                                        @elseif(in_array($lap->status, ['diajukan', 'menunggu', 'verifikasi'])) bg-amber-100 text-amber-800
                                         @elseif($lap->status === 'diproses') bg-blue-100 text-blue-800
-                                        @elseif($lap->status === 'selesai' && $lap->sub_status === 'selesai_ditolak') bg-rose-100 text-rose-800
                                         @elseif($lap->status === 'selesai') bg-emerald-100 text-emerald-800
                                         @else bg-slate-100 text-slate-800 @endif">
+                                        @if($lap->status === 'belum_verifikasi')
+                                            <span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse mr-1.5"></span>
+                                        @endif
                                         {{ $lap->status_label }}
                                     </span>
                                 </td>
@@ -473,93 +398,14 @@
                 </table>
             </div>
         </div>
-
-        <!-- Bagian Pengesahan / Tanda Tangan Cetak (Hanya tampil saat dicetak) -->
-        <div class="print-only mt-12 pt-6">
-            <div class="flex justify-between items-start text-xs text-slate-700">
-                <div class="w-1/2">
-                    <p class="font-semibold">Catatan Administrator:</p>
-                    <p class="mt-1 text-slate-500">Laporan ini dicetak secara otomatis melalui Sistem KOMPLAIN sebagai dokumen rekapitulasi pengaduan pegawai.</p>
-                </div>
-                <div class="w-1/3 text-right">
-                    <p>{{ now()->translatedFormat('d F Y') }}</p>
-                    <p class="mt-1 font-semibold">Penanggung Jawab Sistem,</p>
-                    <div class="h-16"></div>
-                    <p class="font-bold underline text-slate-900">{{ auth()->user()->name ?? auth()->user()->nama }}</p>
-                    <p class="text-slate-500">NIP. {{ auth()->user()->nip ?? '-' }}</p>
-                </div>
-            </div>
-        </div>
     </main>
 
-    <!-- Footer Web (Disembunyikan saat dicetak) -->
-    <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-400 mt-10 no-print">
+    <!-- Footer Web -->
+    <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-400 mt-10">
         Panel Administrator KOMPLAIN &copy; {{ date('Y') }}
     </footer>
 
-    <!-- Script Export CSV -->
     <script>
-        function exportRekapToCSV() {
-            const table = document.getElementById('tabel-rekap');
-            if (!table) return;
-
-            const rows = table.querySelectorAll('tr');
-            if (rows.length <= 1) {
-                alert('Tidak ada data untuk diekspor.');
-                return;
-            }
-
-            let csv = [];
-            // Header kolom
-            const headers = ['Pelapor', 'Klasifikasi', 'Uraian Pengaduan', 'Waktu Masuk', 'Status', 'Tanggal Selesai'];
-            csv.push(headers.map(h => `"${h}"`).join(','));
-
-            // Baris data
-            const tbodyRows = table.querySelectorAll('tbody tr');
-            let dataCount = 0;
-
-            tbodyRows.forEach((row) => {
-                const cells = row.querySelectorAll('td');
-                // Lewati baris kosong (empty state)
-                if (cells.length < 6) return;
-
-                dataCount++;
-                const pelapor = cells[0].innerText.replace(/\s+/g, ' ').trim();
-                const kategori = cells[1].innerText.trim();
-                const uraian = cells[2].innerText.replace(/\s+/g, ' ').trim();
-                const waktuMasuk = cells[3].innerText.replace(/\s+/g, ' ').trim();
-                const status = cells[4].innerText.trim();
-                const tglSelesai = cells[5].innerText.trim();
-
-                const rowData = [
-                    pelapor,
-                    kategori,
-                    uraian,
-                    waktuMasuk,
-                    status,
-                    tglSelesai
-                ].map(val => `"${val.replace(/"/g, '""')}"`);
-
-                csv.push(rowData.join(','));
-            });
-
-            if (dataCount === 0) {
-                alert('Tidak ada data pengaduan untuk diekspor.');
-                return;
-            }
-
-            const csvContent = '\uFEFF' + csv.join('\r\n');
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            const dateStr = new Date().toISOString().slice(0, 10);
-            link.setAttribute('href', url);
-            link.setAttribute('download', `rekap-pengaduan-${dateStr}.csv`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-
         function updateLiveClock() {
             const el = document.getElementById('live-clock');
             if (!el) return;
