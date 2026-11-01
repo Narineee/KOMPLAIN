@@ -16,9 +16,18 @@ class AuthController extends Controller
     public function showLoginForm(Request $request): View|RedirectResponse
     {
         if (Auth::check()) {
-            return Auth::user()->role === 'admin'
-                ? redirect()->route('admin.dashboard')
-                : redirect()->route('pegawai.dashboard');
+            /** @var User $user */
+            $user = Auth::user();
+
+            if ($user->isAdmin()) {
+                return redirect()->route('admin.dashboard');
+            }
+
+            if ($user->isPetugas()) {
+                return redirect()->route('petugas.dashboard');
+            }
+
+            return redirect()->route('pegawai.dashboard');
         }
 
         $defaultRole = $request->query('role', 'pengadu');
@@ -73,6 +82,11 @@ class AuthController extends Controller
         if ($user->isAdmin()) {
             return redirect()->intended(route('admin.dashboard'))
                 ->with('status', "Selamat datang kembali, {$user->name} (Administrator)!");
+        }
+
+        if ($user->isPetugas()) {
+            return redirect()->intended(route('petugas.dashboard'))
+                ->with('status', "Selamat datang kembali, {$user->name} (Petugas Bidang)!");
         }
 
         return redirect()->intended(route('pegawai.dashboard'))

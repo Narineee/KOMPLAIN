@@ -33,6 +33,10 @@
         $label = $subLabel ? 'Diproses ('.$subLabel.')' : 'Diproses';
         $kelas = 'bg-blue-100 text-blue-800 border border-blue-200/60';
         $dot = 'bg-blue-500';
+    } elseif ($p->status === 'selesai' && $p->konfirmasi_pelapor === 'otomatis') {
+        $label = 'Selesai (Otomatis)';
+        $kelas = 'bg-emerald-100 text-emerald-800 border border-emerald-200/60';
+        $dot = 'bg-emerald-500';
     } elseif ($p->status === 'selesai' || $p->status === 'ditolak') {
         $label = 'Selesai';
         $kelas = 'bg-emerald-100 text-emerald-800 border border-emerald-200/60';

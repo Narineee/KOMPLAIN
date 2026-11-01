@@ -1,104 +1,9 @@
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="h-full bg-slate-50">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Kelola Pengguna - Admin KOMPLAIN</title>
+@extends('layouts.admin')
 
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700" rel="stylesheet" />
+@section('title', 'Manajemen Pengguna')
 
-    <!-- Scripts & Styles via Vite -->
-    @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
-    @else
-        <script src="https://cdn.tailwindcss.com"></script>
-    @endif
-</head>
-<body class="min-h-full flex flex-col text-slate-800 antialiased selection:bg-indigo-500 selection:text-white">
-    <!-- Navbar Admin -->
-    <nav class="bg-indigo-900 text-white sticky top-0 z-30 shadow-md">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16">
-                <div class="flex items-center gap-3">
-                    <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-2">
-                        <div class="w-9 h-9 rounded-lg bg-indigo-700 flex items-center justify-center font-bold text-lg text-white">
-                            K
-                        </div>
-                        <div>
-                            <span class="font-bold text-base leading-tight block">KOMPLAIN</span>
-                            <span class="text-[10px] text-indigo-300 block font-medium">Panel Administrator</span>
-                        </div>
-                    </a>
-
-                    <div class="hidden md:flex items-center gap-1 ml-8">
-                        <a href="{{ route('admin.dashboard') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-200 hover:text-white hover:bg-indigo-800/60 transition">
-                            Dashboard
-                        </a>
-                        <a href="{{ route('admin.laporan.index') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-200 hover:text-white hover:bg-indigo-800/60 transition">
-                            Semua Laporan
-                        </a>
-                        <a href="{{ route('admin.kategori.index') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-200 hover:text-white hover:bg-indigo-800/60 transition">
-                            Klasifikasi
-                        </a>
-                        <a href="{{ route('admin.pegawai.index') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-800 text-white">
-                            Pengguna
-                        </a>
-                        <a href="{{ route('admin.rekap') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-200 hover:text-white hover:bg-indigo-800/60 transition">
-                            Rekap
-                        </a>
-                    </div>
-                </div>
-
-                <div class="flex items-center gap-4">
-                    <div class="text-right hidden sm:block">
-                        <span class="block text-xs font-semibold text-white">{{ auth()->user()->name }}</span>
-                        <span class="block text-[10px] text-indigo-300">Administrator ({{ auth()->user()->email }})</span>
-                    </div>
-
-                    <form action="{{ route('logout') }}" method="POST" class="inline">
-                        @csrf
-                        <button type="submit" class="py-1.5 px-3 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white transition shadow-sm">
-                            Keluar
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </nav>
-
-    <!-- Main Content -->
-    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <!-- Flash Messages -->
-        @if (session('success'))
-            <div class="mb-6 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm flex items-center gap-2 shadow-sm">
-                <svg class="w-5 h-5 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>{{ session('success') }}</span>
-            </div>
-        @endif
-
-        @if (session('error'))
-            <div class="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm flex items-center gap-2 shadow-sm">
-                <svg class="w-5 h-5 text-rose-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>{{ session('error') }}</span>
-            </div>
-        @endif
-
-        @if (session('info'))
-            <div class="mb-6 p-4 rounded-xl bg-sky-50 border border-sky-200 text-sky-800 text-sm flex items-center gap-2 shadow-sm">
-                <svg class="w-5 h-5 text-sky-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>{{ session('info') }}</span>
-            </div>
-        @endif
-
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+@section('content')
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
             <div>
                 <h1 class="text-2xl font-bold text-slate-900">Manajemen Pengguna</h1>
                 <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Kelola akun administrator dan pegawai internal dinas.</p>
@@ -130,6 +35,7 @@
                     <select name="role" class="w-full text-xs rounded-xl border border-slate-300 px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600">
                         <option value="">-- Semua Role --</option>
                         <option value="admin" {{ ($filter['role'] ?? '') === 'admin' ? 'selected' : '' }}>Administrator</option>
+                        <option value="petugas" {{ ($filter['role'] ?? '') === 'petugas' ? 'selected' : '' }}>Petugas Bidang</option>
                         <option value="pegawai" {{ ($filter['role'] ?? '') === 'pegawai' ? 'selected' : '' }}>Pegawai</option>
                     </select>
                 </div>
@@ -191,9 +97,19 @@
                                     {{ $user->email }}
                                 </td>
                                 <td class="py-3.5 px-4">
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold {{ $user->role === 'admin' ? 'bg-indigo-100 text-indigo-800' : 'bg-blue-100 text-blue-800' }}">
-                                        {{ ucfirst($user->role) }}
-                                    </span>
+                                    @if ($user->role === 'admin')
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800">
+                                            Administrator
+                                        </span>
+                                    @elseif ($user->role === 'petugas')
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
+                                            Petugas Bidang
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+                                            Pegawai
+                                        </span>
+                                    @endif
                                 </td>
                                 <td class="py-3.5 px-4 text-slate-600">
                                     {{ $user->unit->nama_unit ?? '-' }}
@@ -248,10 +164,5 @@
                 </div>
             @endif
         </div>
-    </main>
-
-    <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-400 mt-10">
-        Panel Administrator KOMPLAIN &copy; {{ date('Y') }}
-    </footer>
-</body>
-</html>
+    </div>
+@endsection

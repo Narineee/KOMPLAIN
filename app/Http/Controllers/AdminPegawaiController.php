@@ -72,8 +72,8 @@ class AdminPegawaiController extends Controller
             'name' => ['required', 'string', 'max:150'],
             'email' => ['required', 'email', 'max:150', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8'],
-            'role' => ['required', 'in:admin,pegawai'],
-            'unit_id' => ['nullable', 'exists:unit,id'],
+            'role' => ['required', 'in:admin,pegawai,petugas'],
+            'unit_id' => [Rule::requiredIf(fn () => $request->input('role') === 'petugas'), 'nullable', 'exists:unit,id'],
             'is_aktif' => ['boolean'],
         ], [
             'name.required' => 'Nama lengkap wajib diisi.',
@@ -84,7 +84,8 @@ class AdminPegawaiController extends Controller
             'password.required' => 'Password wajib diisi.',
             'password.min' => 'Password minimal 8 karakter.',
             'role.required' => 'Peran (role) wajib dipilih.',
-            'role.in' => 'Peran harus berupa admin atau pegawai.',
+            'role.in' => 'Peran harus berupa admin, pegawai, atau petugas bidang.',
+            'unit_id.required' => 'Bidang tugas wajib dipilih untuk Petugas Bidang.',
             'unit_id.exists' => 'Unit kerja tidak valid.',
         ]);
 
@@ -124,8 +125,8 @@ class AdminPegawaiController extends Controller
             'name' => ['required', 'string', 'max:150'],
             'email' => ['required', 'email', 'max:150', Rule::unique('users', 'email')->ignore($user->id)],
             'password' => ['nullable', 'string', 'min:8'],
-            'role' => ['required', 'in:admin,pegawai'],
-            'unit_id' => ['nullable', 'exists:unit,id'],
+            'role' => ['required', 'in:admin,pegawai,petugas'],
+            'unit_id' => [Rule::requiredIf(fn () => $request->input('role') === 'petugas'), 'nullable', 'exists:unit,id'],
             'is_aktif' => ['boolean'],
         ], [
             'name.required' => 'Nama lengkap wajib diisi.',
@@ -135,7 +136,8 @@ class AdminPegawaiController extends Controller
             'nip.unique' => 'NIP sudah terdaftar.',
             'password.min' => 'Password minimal 8 karakter.',
             'role.required' => 'Peran (role) wajib dipilih.',
-            'role.in' => 'Peran harus berupa admin atau pegawai.',
+            'role.in' => 'Peran harus berupa admin, pegawai, atau petugas bidang.',
+            'unit_id.required' => 'Bidang tugas wajib dipilih untuk Petugas Bidang.',
             'unit_id.exists' => 'Unit kerja tidak valid.',
         ]);
 

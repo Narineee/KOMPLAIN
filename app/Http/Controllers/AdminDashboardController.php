@@ -6,6 +6,8 @@ use App\Models\Kategori;
 use App\Models\Notifikasi;
 use App\Models\Pengajuan;
 use App\Models\RiwayatStatus;
+use App\Models\Unit;
+use App\Models\User;
 use App\Services\PdfService;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
@@ -117,7 +119,7 @@ class AdminDashboardController extends Controller
      */
     public function laporanIndex(Request $request): View
     {
-        $query = Pengajuan::with(['kategori.parent', 'user.unit'])->latest();
+        $query = Pengajuan::with(['kategori.parent', 'user.unit', 'assignedUnit', 'petugas'])->latest();
 
         if ($request->filled('status')) {
             $status = $request->query('status');
@@ -141,6 +143,10 @@ class AdminDashboardController extends Controller
 
         if ($request->filled('sub_status')) {
             $query->where('sub_status', $request->query('sub_status'));
+        }
+
+        if ($request->filled('assigned_unit_id')) {
+            $query->where('assigned_unit_id', $request->query('assigned_unit_id'));
         }
 
         if ($request->filled('kategori_id')) {
@@ -176,69 +182,41 @@ class AdminDashboardController extends Controller
 
         $pengajuans = $query->paginate(15)->withQueryString();
         $kategoris = Kategori::with('parent')->where('aktif', true)->orderBy('nama_kategori')->get();
+        $units = Unit::orderBy('nama_unit')->get();
 
         return view('admin.laporan.index', [
             'pengajuans' => $pengajuans,
             'kategoris' => $kategoris,
+            'units' => $units,
             'filter' => $request->all(),
         ]);
     }
 
     /**
      * Menampilkan detail lengkap laporan beserta tanggapan dan riwayat.
-     * Otomatis memverifikasi laporan jika status sebelumnya adalah 'belum_verifikasi'.
      */
     public function laporanShow(Request $request, Pengajuan $pengajuan): View
     {
-        $admin = $request->user();
-
-        // Otomatis ubah status dari belum_verifikasi ke verifikasi jika admin membuka detail laporan
-        if ($pengajuan->status === 'belum_verifikasi' && ! $request->boolean('keep_unverified')) {
-            DB::transaction(function () use ($pengajuan, $admin) {
-                $statusLama = $pengajuan->status;
-                $statusBaru = 'verifikasi';
-
-                $pengajuan->update([
-                    'status' => $statusBaru,
-                ]);
-
-                RiwayatStatus::create([
-                    'pengajuan_id' => $pengajuan->id,
-                    'diubah_oleh' => $admin->id,
-                    'status_sebelumnya' => $statusLama,
-                    'status_baru' => $statusBaru,
-                    'sub_status_sebelumnya' => $pengajuan->sub_status,
-                    'sub_status_baru' => null,
-                    'catatan' => 'Laporan telah dibuka dan diverifikasi oleh admin.',
-                ]);
-
-                if (! $pengajuan->is_anonim && $pengajuan->user_id) {
-                    Notifikasi::create([
-                        'user_id' => $pengajuan->user_id,
-                        'pengajuan_id' => $pengajuan->id,
-                        'judul' => 'Status Laporan Diperbarui',
-                        'pesan' => "Status laporan #{$pengajuan->id} telah diubah menjadi: Verifikasi",
-                        'tipe' => 'status_update',
-                    ]);
-                }
-            });
-
-            $pengajuan->refresh();
-        }
-
         $pengajuan->load([
             'kategori.parent',
             'user.unit',
             'lampirans',
             'riwayatStatuses.user',
             'tanggapans.user',
+            'petugas',
+            'assignedUnit',
         ]);
+
+        $units = Unit::orderBy('nama_unit')->get();
+        $petugasList = User::where('role', 'petugas')->where('status_akun', 'aktif')->orderBy('nama')->get();
 
         $isAnonimUnlocked = (bool) session('unlocked_anonim_'.$pengajuan->id, false);
 
         return view('admin.laporan.show', [
             'pengajuan' => $pengajuan,
             'isAnonimUnlocked' => $isAnonimUnlocked,
+            'units' => $units,
+            'petugasList' => $petugasList,
         ]);
     }
 
@@ -417,11 +395,87 @@ class AdminDashboardController extends Controller
         });
 
         if ($statusBaru === 'belum_verifikasi') {
-            return redirect()->route('admin.laporan.show', ['pengajuan' => $pengajuan, 'keep_unverified' => 1])
+            return redirect()->route('admin.laporan.show', $pengajuan)
                 ->with('success', "Status laporan berhasil diperbarui menjadi: {$labelStatus}.");
         }
 
         return back()->with('success', "Status laporan berhasil diperbarui menjadi: {$labelStatus}.");
+    }
+
+    /**
+     * Menugaskan laporan ke bidang tugas dan petugas bidang berwenang.
+     */
+    public function tugaskan(Request $request, Pengajuan $pengajuan): RedirectResponse
+    {
+        $validated = $request->validate([
+            'assigned_unit_id' => ['required', 'exists:unit,id'],
+            'petugas_id' => ['nullable', 'exists:users,id'],
+            'catatan_penugasan' => ['nullable', 'string', 'max:1000'],
+        ], [
+            'assigned_unit_id.required' => 'Bidang tugas wajib dipilih.',
+            'assigned_unit_id.exists' => 'Bidang tugas tidak valid.',
+            'petugas_id.exists' => 'Petugas bidang tidak valid.',
+        ]);
+
+        $admin = $request->user();
+        $unit = Unit::findOrFail($validated['assigned_unit_id']);
+        $petugas = ! empty($validated['petugas_id']) ? User::find($validated['petugas_id']) : null;
+        $catatan = $validated['catatan_penugasan'] ?? null;
+
+        DB::transaction(function () use ($pengajuan, $unit, $petugas, $catatan, $admin) {
+            $statusLama = $pengajuan->status;
+            $subStatusLama = $pengajuan->sub_status;
+
+            // Jika status masih belum_verifikasi atau verifikasi, otomatis jadikan diproses
+            $statusBaru = in_array($statusLama, ['belum_verifikasi', 'verifikasi', 'menunggu', 'diajukan'], true) ? 'diproses' : $statusLama;
+            $subStatusBaru = $statusBaru === 'diproses' && empty($subStatusLama) ? 'identifikasi_klarifikasi' : $subStatusLama;
+
+            $pengajuan->update([
+                'assigned_unit_id' => $unit->id,
+                'petugas_id' => $petugas?->id,
+                'catatan_penugasan' => $catatan,
+                'status' => $statusBaru,
+                'sub_status' => $subStatusBaru,
+            ]);
+
+            $teksPetugas = $petugas ? " ({$petugas->name})" : '';
+            $teksCatatan = $catatan ? " - Catatan: {$catatan}" : '';
+            $deskripsiRiwayat = "Ditugaskan ke {$unit->nama_unit}{$teksPetugas}{$teksCatatan}";
+
+            RiwayatStatus::create([
+                'pengajuan_id' => $pengajuan->id,
+                'diubah_oleh' => $admin->id,
+                'status_sebelumnya' => $statusLama,
+                'status_baru' => $statusBaru,
+                'sub_status_sebelumnya' => $subStatusLama,
+                'sub_status_baru' => $subStatusBaru,
+                'catatan' => $deskripsiRiwayat,
+            ]);
+
+            // Notifikasi ke petugas yang ditugaskan
+            if ($petugas) {
+                Notifikasi::create([
+                    'user_id' => $petugas->id,
+                    'pengajuan_id' => $pengajuan->id,
+                    'judul' => 'Tugas Pengaduan Baru',
+                    'pesan' => "Anda telah ditugaskan oleh Admin untuk menangani laporan #{$pengajuan->id}.",
+                    'tipe' => 'penugasan_baru',
+                ]);
+            }
+
+            // Notifikasi ke pelapor jika bukan anonim
+            if (! $pengajuan->is_anonim && $pengajuan->user_id) {
+                Notifikasi::create([
+                    'user_id' => $pengajuan->user_id,
+                    'pengajuan_id' => $pengajuan->id,
+                    'judul' => 'Laporan Diteruskan ke Bidang Terkait',
+                    'pesan' => "Laporan Anda telah diteruskan ke {$unit->nama_unit} untuk ditindaklanjuti.",
+                    'tipe' => 'status_update',
+                ]);
+            }
+        });
+
+        return back()->with('success', "Laporan berhasil ditugaskan ke {$unit->nama_unit}.");
     }
 
     /**
@@ -453,7 +507,7 @@ class AdminDashboardController extends Controller
             });
         }
 
-        return redirect()->route('admin.laporan.show', ['pengajuan' => $pengajuan, 'keep_unverified' => 1])
+        return redirect()->route('admin.laporan.show', $pengajuan)
             ->with('success', "Status laporan #{$pengajuan->id} berhasil diubah kembali ke Belum Diverifikasi.");
     }
 
@@ -507,7 +561,7 @@ class AdminDashboardController extends Controller
     protected function getRekapData(Request $request): array
     {
         $kategoris = Kategori::with('parent')->orderBy('nama_kategori')->get();
-        $query = Pengajuan::with(['kategori.parent', 'user.unit']);
+        $query = Pengajuan::with(['kategori.parent', 'user.unit', 'assignedUnit', 'petugas']);
 
         if ($request->filled('dari_tanggal')) {
             $query->whereDate('created_at', '>=', $request->query('dari_tanggal'));
@@ -515,6 +569,10 @@ class AdminDashboardController extends Controller
 
         if ($request->filled('sampai_tanggal')) {
             $query->whereDate('created_at', '<=', $request->query('sampai_tanggal'));
+        }
+
+        if ($request->filled('assigned_unit_id')) {
+            $query->where('assigned_unit_id', $request->query('assigned_unit_id'));
         }
 
         if ($request->filled('kategori_id')) {

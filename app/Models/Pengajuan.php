@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 #[Fillable([
@@ -28,6 +30,9 @@ use Illuminate\Support\Str;
     'konfirmasi_pelapor',
     'dikonfirmasi_pada',
     'jumlah_keberatan',
+    'assigned_unit_id',
+    'petugas_id',
+    'catatan_penugasan',
 ])]
 
 #[Table('pengajuan')]
@@ -51,6 +56,11 @@ class Pengajuan extends Model
         'selesai' => 'Selesai',
         'selesai_setelah_tinjau_ulang' => 'Selesai setelah tinjau ulang',
     ];
+
+    /**
+     * Batas waktu konfirmasi pelapor dalam satuan hari sebelum dikonfirmasi otomatis oleh sistem.
+     */
+    public const BATAS_HARI_KONFIRMASI = 3;
 
     protected function casts(): array
     {
@@ -120,12 +130,27 @@ class Pengajuan extends Model
         return ucfirst(str_replace('_', ' ', $this->status ?? 'Belum Diverifikasi'));
     }
 
+    public function getBatasWaktuKonfirmasiAttribute(): ?Carbon
+    {
+        return $this->tanggal_selesai?->copy()->addDays(self::BATAS_HARI_KONFIRMASI);
+    }
+
+    public function getApakahKadaluarsaKonfirmasiAttribute(): bool
+    {
+        if (! $this->tanggal_selesai) {
+            return false;
+        }
+
+        return $this->tanggal_selesai->copy()->addDays(self::BATAS_HARI_KONFIRMASI)->isPast();
+    }
+
     public function getPerluKonfirmasiAttribute(): bool
     {
         return $this->status === 'selesai'
             && is_null($this->konfirmasi_pelapor)
             && ($this->jumlah_keberatan ?? 0) === 0
-            && $this->sub_status !== 'selesai_setelah_tinjau_ulang';
+            && $this->sub_status !== 'selesai_setelah_tinjau_ulang'
+            && ! $this->apakah_kadaluarsa_konfirmasi;
     }
 
     public function getBisaAjukanKeberatanAttribute(): bool
@@ -133,7 +158,8 @@ class Pengajuan extends Model
         return $this->status === 'selesai'
             && ($this->jumlah_keberatan ?? 0) < 1
             && $this->sub_status !== 'selesai_setelah_tinjau_ulang'
-            && $this->konfirmasi_pelapor !== 'dikonfirmasi';
+            && ! in_array($this->konfirmasi_pelapor, ['dikonfirmasi', 'otomatis'], true)
+            && ! $this->apakah_kadaluarsa_konfirmasi;
     }
 
     public function scopePerluKonfirmasi(Builder $query): Builder
@@ -145,7 +171,67 @@ class Pengajuan extends Model
             })
             ->where(function ($q) {
                 $q->whereNull('sub_status')->orWhere('sub_status', '!=', 'selesai_setelah_tinjau_ulang');
+            })
+            ->where(function ($q) {
+                $q->whereNull('tanggal_selesai')
+                    ->orWhere('tanggal_selesai', '>', now()->subDays(self::BATAS_HARI_KONFIRMASI));
             });
+    }
+
+    public function scopeKadaluarsaKonfirmasi(Builder $query): Builder
+    {
+        return $query->where('status', 'selesai')
+            ->whereNull('konfirmasi_pelapor')
+            ->where(function ($q) {
+                $q->whereNull('jumlah_keberatan')->orWhere('jumlah_keberatan', 0);
+            })
+            ->where(function ($q) {
+                $q->whereNull('sub_status')->orWhere('sub_status', '!=', 'selesai_setelah_tinjau_ulang');
+            })
+            ->whereNotNull('tanggal_selesai')
+            ->where('tanggal_selesai', '<=', now()->subDays(self::BATAS_HARI_KONFIRMASI));
+    }
+
+    /**
+     * Memproses konfirmasi otomatis oleh sistem untuk seluruh aduan yang melewati batas waktu 3 hari.
+     */
+    public static function prosesAutoKonfirmasiKadaluarsa(): int
+    {
+        $kadaluarsa = static::kadaluarsaKonfirmasi()->get();
+        $count = 0;
+
+        foreach ($kadaluarsa as $p) {
+            DB::transaction(function () use ($p) {
+                $p->update([
+                    'konfirmasi_pelapor' => 'otomatis',
+                    'dikonfirmasi_pada' => now(),
+                ]);
+
+                RiwayatStatus::create([
+                    'pengajuan_id' => $p->id,
+                    'diubah_oleh' => null,
+                    'status_sebelumnya' => 'selesai',
+                    'status_baru' => 'selesai',
+                    'sub_status_sebelumnya' => $p->sub_status,
+                    'sub_status_baru' => $p->sub_status,
+                    'catatan' => 'Laporan dikonfirmasi selesai secara otomatis oleh sistem karena telah melewati batas waktu 3 hari tanpa respons pelapor.',
+                ]);
+
+                if (! $p->is_anonim && $p->user_id) {
+                    Notifikasi::create([
+                        'user_id' => $p->user_id,
+                        'pengajuan_id' => $p->id,
+                        'judul' => 'Laporan Dikonfirmasi Otomatis',
+                        'pesan' => "Laporan #{$p->id} telah dikonfirmasi selesai secara otomatis oleh sistem karena melewati batas waktu 3 hari.",
+                        'tipe' => 'status_update',
+                    ]);
+                }
+            });
+
+            $count++;
+        }
+
+        return $count;
     }
 
     public function getIsiLaporanAttribute(): ?string
@@ -179,6 +265,16 @@ class Pengajuan extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function petugas(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'petugas_id');
+    }
+
+    public function assignedUnit(): BelongsTo
+    {
+        return $this->belongsTo(Unit::class, 'assigned_unit_id');
     }
 
     public function kategori(): BelongsTo

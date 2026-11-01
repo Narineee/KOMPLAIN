@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Models\Kategori;
 use App\Models\Pengajuan;
-use App\Models\RiwayatStatus;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -795,7 +794,7 @@ class AdminLaporanTest extends TestCase
         $this->assertStringStartsWith('%PDF-', $response->getContent());
     }
 
-    public function test_new_pengajuan_is_belum_verifikasi_and_automatically_becomes_verifikasi_when_admin_opens_detail(): void
+    public function test_new_pengajuan_is_belum_verifikasi_and_verified_manually_by_admin(): void
     {
         $admin = User::factory()->create(['role' => 'admin', 'is_aktif' => true]);
         $pegawai = User::factory()->create(['role' => 'pegawai', 'is_aktif' => true]);
@@ -819,10 +818,23 @@ class AdminLaporanTest extends TestCase
         $respIndex = $this->actingAs($admin)->get(route('admin.laporan.index'));
         $respIndex->assertSee('Belum Diverifikasi');
 
-        // Saat admin membuka halaman detail laporan: otomatis diverifikasi
+        // Saat admin membuka halaman detail laporan: status TETAP belum_verifikasi (tidak ada mutasi GET)
         $respShow = $this->actingAs($admin)->get(route('admin.laporan.show', $pengajuan));
         $respShow->assertStatus(200);
-        $respShow->assertSee('Status: Verifikasi');
+        $respShow->assertSee('Status: Belum Diverifikasi');
+        $respShow->assertSee('Verifikasi Sekarang');
+
+        $pengajuan->refresh();
+        $this->assertSame('belum_verifikasi', $pengajuan->status);
+        $this->assertSame('Belum Diverifikasi', $pengajuan->status_label);
+
+        // Membuka ulang berkali-kali tidak ada efek samping mutasi
+        $this->actingAs($admin)->get(route('admin.laporan.show', $pengajuan));
+        $this->assertSame('belum_verifikasi', $pengajuan->fresh()->status);
+
+        // Admin memverifikasi secara eksplisit via PATCH
+        $respVerif = $this->actingAs($admin)->patch(route('admin.laporan.verifikasi', $pengajuan));
+        $respVerif->assertRedirect(route('admin.laporan.show', $pengajuan));
 
         $pengajuan->refresh();
         $this->assertSame('verifikasi', $pengajuan->status);
@@ -833,13 +845,8 @@ class AdminLaporanTest extends TestCase
             'pengajuan_id' => $pengajuan->id,
             'status_sebelumnya' => 'belum_verifikasi',
             'status_baru' => 'verifikasi',
-            'catatan' => 'Laporan telah dibuka dan diverifikasi oleh admin.',
+            'catatan' => 'Admin memverifikasi laporan.',
         ]);
-
-        // Membuka kedua kali tidak menduplikasi riwayat status
-        $countRiwayat = RiwayatStatus::where('pengajuan_id', $pengajuan->id)->count();
-        $this->actingAs($admin)->get(route('admin.laporan.show', $pengajuan));
-        $this->assertSame($countRiwayat, RiwayatStatus::where('pengajuan_id', $pengajuan->id)->count());
     }
 
     public function test_admin_can_mark_laporan_back_to_belum_verifikasi_and_verify_again(): void
@@ -857,7 +864,7 @@ class AdminLaporanTest extends TestCase
 
         // 1. Admin menandai kembali sebagai Belum Diverifikasi
         $respTandai = $this->actingAs($admin)->patch(route('admin.laporan.tandai-belum-verifikasi', $pengajuan));
-        $respTandai->assertRedirect(route('admin.laporan.show', ['pengajuan' => $pengajuan, 'keep_unverified' => 1]));
+        $respTandai->assertRedirect(route('admin.laporan.show', $pengajuan));
 
         $pengajuan->refresh();
         $this->assertSame('belum_verifikasi', $pengajuan->status);

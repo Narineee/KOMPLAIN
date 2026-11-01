@@ -1,16 +1,30 @@
-@props(['pengajuan'])
+@props(['pengajuan', 'url' => null])
 
-@php $p = $pengajuan; @endphp
+@php
+    $p = $pengajuan;
+    $targetUrl = $url ?? (auth()->user()?->isPetugas() && request()->routeIs('petugas.aduan.*')
+        ? route('petugas.aduan.show', $p)
+        : route('pegawai.pengajuan.show', $p));
+    $isPetugas = request()->routeIs('petugas.*');
+@endphp
 
-<a href="{{ route('pegawai.pengajuan.show', $p) }}"
-   class="group block rounded-2xl border border-slate-200/90 bg-white p-4.5 sm:p-5 shadow-xs transition hover:border-blue-400 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600">
+<a href="{{ $targetUrl }}"
+   @class([
+       'group block rounded-2xl border border-slate-200/90 bg-white p-4.5 sm:p-5 shadow-xs transition hover:shadow-md focus:outline-none focus-visible:ring-2',
+       'hover:border-amber-400 focus-visible:ring-amber-500' => $isPetugas,
+       'hover:border-blue-400 focus-visible:ring-blue-600' => ! $isPetugas,
+   ])>
     <div class="flex items-center justify-between text-xs text-slate-500">
         <span>{{ $p->created_at->locale('id')->translatedFormat('d M Y') }}</span>
         <span class="font-mono text-slate-400">#{{ $p->id }}</span>
     </div>
 
     <div class="mt-2">
-        <h3 class="text-[15px] font-semibold leading-snug text-slate-900 group-hover:text-blue-600 transition">
+        <h3 @class([
+            'text-[15px] font-semibold leading-snug text-slate-900 transition',
+            'group-hover:text-amber-700' => $isPetugas,
+            'group-hover:text-blue-600' => ! $isPetugas,
+        ])>
             {{ $p->judul ?: 'Pengaduan #'.$p->id }}
         </h3>
     </div>

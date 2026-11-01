@@ -86,6 +86,15 @@
             </div>
         </fieldset>
 
+        @php
+            $oldKategoriId = old('kategori_id');
+            $selectedParentId = null;
+            if ($oldKategoriId) {
+                $selectedKat = \App\Models\Kategori::find($oldKategoriId);
+                $selectedParentId = $selectedKat?->parent_id ?? $selectedKat?->id;
+            }
+        @endphp
+
         <!-- Klasifikasi -->
         <div>
             <label for="parent_kategori_select" class="block text-sm font-bold text-slate-900">
@@ -97,6 +106,7 @@
                     <option value="">Pilih klasifikasi</option>
                     @foreach ($parentKategoris as $kategori)
                         <option value="{{ $kategori->id }}"
+                                @selected($selectedParentId == $kategori->id)
                                 data-keterangan="{{ $kategori->keterangan ?? '' }}"
                                 data-children="{{ json_encode($kategori->activeChildren->map(fn ($c) => ['id' => $c->id, 'nama' => $c->nama_kategori, 'keterangan' => $c->keterangan])) }}">
                             {{ $kategori->nama_kategori }}
@@ -117,6 +127,8 @@
                 <p class="text-sm font-bold text-slate-900">Pilih jenis yang paling sesuai <span class="text-rose-500">*</span></p>
                 <div id="subkategori_options_container" class="mt-3 grid grid-cols-1 gap-2.5 sm:grid-cols-2"></div>
             </div>
+
+            <p id="klasifikasi_error_text" class="mt-1.5 hidden text-xs font-semibold text-rose-600"></p>
 
             <input type="hidden" name="kategori_id" id="kategori_id" value="{{ old('kategori_id') }}">
             @error('kategori_id')
@@ -250,95 +262,177 @@
     })();
 
     // ---------- Klasifikasi & sub-klasifikasi ----------
-    document.addEventListener('DOMContentLoaded', function () {
-        const parentSelect = document.getElementById('parent_kategori_select');
-        const hiddenKategoriId = document.getElementById('kategori_id');
-        const keteranganText = document.getElementById('kategori_keterangan_text');
-        const subWrapper = document.getElementById('subkategori_wrapper');
-        const subContainer = document.getElementById('subkategori_options_container');
-        const initialKategoriId = "{{ old('kategori_id') }}";
+    (function () {
+        function initKlasifikasi() {
+            const parentSelect = document.getElementById('parent_kategori_select');
+            const hiddenKategoriId = document.getElementById('kategori_id');
+            const keteranganText = document.getElementById('kategori_keterangan_text');
+            const subWrapper = document.getElementById('subkategori_wrapper');
+            const subContainer = document.getElementById('subkategori_options_container');
+            const errorText = document.getElementById('klasifikasi_error_text');
+            const initialKategoriId = "{{ old('kategori_id') }}";
 
-        const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+            if (!parentSelect || !hiddenKategoriId) return;
 
-        function updateCategoryUI() {
-            const opt = parentSelect.options[parentSelect.selectedIndex];
+            const form = hiddenKategoriId.closest('form');
 
-            if (!opt || !opt.value) {
-                keteranganText.classList.add('hidden');
-                subWrapper.classList.add('hidden');
-                subContainer.innerHTML = '';
-                hiddenKategoriId.value = '';
-                return;
+            const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+            function clearError() {
+                if (errorText) {
+                    errorText.classList.add('hidden');
+                    errorText.textContent = '';
+                }
+                parentSelect.classList.remove('border-rose-500', 'ring-2', 'ring-rose-500/20');
+                if (subWrapper) {
+                    subWrapper.classList.remove('border-rose-400', 'ring-2', 'ring-rose-500/20');
+                }
             }
 
-            const ket = (opt.getAttribute('data-keterangan') || '').trim();
-            keteranganText.textContent = ket;
-            keteranganText.classList.toggle('hidden', ket === '');
+            function updateCategoryUI(targetChildId = null) {
+                clearError();
+                const opt = parentSelect.options[parentSelect.selectedIndex];
 
-            let children = [];
-            try { children = JSON.parse(opt.getAttribute('data-children') || '[]'); } catch (e) {}
+                if (!opt || !opt.value) {
+                    keteranganText.classList.add('hidden');
+                    subWrapper.classList.add('hidden');
+                    subContainer.innerHTML = '';
+                    hiddenKategoriId.value = '';
+                    return;
+                }
 
-            if (children.length === 0) {
-                subWrapper.classList.add('hidden');
-                subContainer.innerHTML = '';
-                hiddenKategoriId.value = opt.value;
-                return;
-            }
+                const ket = (opt.getAttribute('data-keterangan') || '').trim();
+                keteranganText.textContent = ket;
+                keteranganText.classList.toggle('hidden', ket === '');
 
-            subWrapper.classList.remove('hidden');
-            subContainer.innerHTML = '';
-            if (hiddenKategoriId.value === opt.value) hiddenKategoriId.value = '';
-
-            children.forEach(child => {
-                const label = document.createElement('label');
-                label.className = 'flex cursor-pointer flex-col rounded-xl border border-slate-200 bg-white p-3 transition hover:border-blue-400 has-[:checked]:border-blue-600 has-[:checked]:bg-blue-50 has-[:checked]:ring-2 has-[:checked]:ring-blue-500/20';
-                label.innerHTML =
-                    '<div class="flex items-center justify-between gap-2">' +
-                        '<span class="text-sm font-semibold text-slate-800">' + esc(child.nama) + '</span>' +
-                        '<input type="radio" name="_subkategori_radio" value="' + esc(child.id) + '" class="h-4 w-4 border-slate-300 text-blue-600 focus:ring-blue-600"' + (hiddenKategoriId.value == child.id ? ' checked' : '') + '>' +
-                    '</div>' +
-                    (child.keterangan ? '<p class="mt-1 text-xs leading-snug text-slate-500">' + esc(child.keterangan) + '</p>' : '');
-                label.querySelector('input').addEventListener('change', function () {
-                    hiddenKategoriId.value = this.value;
-                });
-                subContainer.appendChild(label);
-            });
-        }
-
-        parentSelect.addEventListener('change', function () {
-            hiddenKategoriId.value = '';
-            updateCategoryUI();
-        });
-
-        // Pulihkan pilihan setelah validasi gagal
-        if (initialKategoriId) {
-            for (let i = 0; i < parentSelect.options.length; i++) {
-                const opt = parentSelect.options[i];
                 let children = [];
-                try { children = JSON.parse(opt.getAttribute('data-children') || '[]'); } catch (e) {}
-                if (opt.value == initialKategoriId || children.some(c => c.id == initialKategoriId)) {
-                    parentSelect.selectedIndex = i;
-                    hiddenKategoriId.value = initialKategoriId;
-                    updateCategoryUI();
-                    break;
+                try {
+                    children = JSON.parse(opt.getAttribute('data-children') || '[]');
+                } catch (e) {
+                    children = [];
                 }
+
+                if (children.length === 0) {
+                    subWrapper.classList.add('hidden');
+                    subContainer.innerHTML = '';
+                    hiddenKategoriId.value = opt.value;
+                    return;
+                }
+
+                subWrapper.classList.remove('hidden');
+                subContainer.innerHTML = '';
+
+                const activeId = targetChildId || (hiddenKategoriId.value !== opt.value ? hiddenKategoriId.value : null);
+                if (!activeId) {
+                    hiddenKategoriId.value = '';
+                }
+
+                children.forEach(child => {
+                    const isChecked = String(activeId) === String(child.id);
+                    const label = document.createElement('label');
+                    label.className = 'sub-card flex cursor-pointer items-center justify-between rounded-xl border p-3.5 transition ' +
+                        (isChecked
+                            ? 'border-blue-600 bg-blue-50 text-blue-900 ring-2 ring-blue-500/20'
+                            : 'border-slate-200 bg-white text-slate-800 hover:border-blue-400');
+
+                    label.innerHTML =
+                        '<div class="min-w-0 flex-1 pr-2">' +
+                            '<span class="text-sm font-bold block">' + esc(child.nama) + '</span>' +
+                            (child.keterangan ? '<p class="mt-0.5 text-xs text-slate-500 leading-snug">' + esc(child.keterangan) + '</p>' : '') +
+                        '</div>' +
+                        '<input type="radio" name="_subkategori_radio" value="' + esc(child.id) + '" class="h-4 w-4 border-slate-300 text-blue-600 focus:ring-blue-600 shrink-0"' + (isChecked ? ' checked' : '') + '>';
+
+                    const radioInput = label.querySelector('input');
+
+                    function selectThisChild() {
+                        clearError();
+                        hiddenKategoriId.value = String(child.id);
+                        radioInput.checked = true;
+
+                        subContainer.querySelectorAll('.sub-card').forEach(c => {
+                            c.classList.remove('border-blue-600', 'bg-blue-50', 'text-blue-900', 'ring-2', 'ring-blue-500/20');
+                            c.classList.add('border-slate-200', 'bg-white', 'text-slate-800');
+                        });
+                        label.classList.remove('border-slate-200', 'bg-white', 'text-slate-800');
+                        label.classList.add('border-blue-600', 'bg-blue-50', 'text-blue-900', 'ring-2', 'ring-blue-500/20');
+                    }
+
+                    label.addEventListener('click', function () {
+                        selectThisChild();
+                    });
+
+                    radioInput.addEventListener('change', function () {
+                        selectThisChild();
+                    });
+
+                    subContainer.appendChild(label);
+                });
+            }
+
+            parentSelect.addEventListener('change', function () {
+                hiddenKategoriId.value = '';
+                updateCategoryUI();
+            });
+
+            if (initialKategoriId) {
+                for (let i = 0; i < parentSelect.options.length; i++) {
+                    const opt = parentSelect.options[i];
+                    if (!opt.value) continue;
+
+                    let children = [];
+                    try { children = JSON.parse(opt.getAttribute('data-children') || '[]'); } catch (e) {}
+
+                    if (String(opt.value) === String(initialKategoriId)) {
+                        parentSelect.selectedIndex = i;
+                        hiddenKategoriId.value = initialKategoriId;
+                        updateCategoryUI();
+                        break;
+                    } else if (children.some(c => String(c.id) === String(initialKategoriId))) {
+                        parentSelect.selectedIndex = i;
+                        hiddenKategoriId.value = initialKategoriId;
+                        updateCategoryUI(initialKategoriId);
+                        break;
+                    }
+                }
+            } else if (parentSelect.value) {
+                updateCategoryUI();
+            }
+
+            if (form) {
+                form.addEventListener('submit', function (e) {
+                    if (!hiddenKategoriId.value) {
+                        e.preventDefault();
+                        e.stopPropagation();
+
+                        if (!parentSelect.value) {
+                            if (errorText) {
+                                errorText.textContent = 'Silakan pilih klasifikasi aduan terlebih dahulu.';
+                                errorText.classList.remove('hidden');
+                            }
+                            parentSelect.classList.add('border-rose-500', 'ring-2', 'ring-rose-500/20');
+                            parentSelect.focus();
+                        } else {
+                            if (errorText) {
+                                errorText.textContent = 'Klasifikasi ini memerlukan pilihan jenis spesifik. Silakan klik salah satu opsi jenis di bawah.';
+                                errorText.classList.remove('hidden');
+                            }
+                            if (subWrapper) {
+                                subWrapper.classList.add('border-rose-400', 'ring-2', 'ring-rose-500/20');
+                                subWrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }
+                        }
+
+                        return false;
+                    }
+                });
             }
         }
 
-        // Cegah kirim jika klasifikasi belum lengkap
-        const form = hiddenKategoriId.closest('form');
-        form.addEventListener('submit', function (e) {
-            if (!hiddenKategoriId.value) {
-                e.preventDefault();
-                if (!parentSelect.value) {
-                    alert('Silakan pilih klasifikasi aduan.');
-                    parentSelect.focus();
-                } else {
-                    alert('Pilih salah satu jenis yang tersedia pada klasifikasi ini.');
-                    subWrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }
-            }
-        });
-    });
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initKlasifikasi);
+        } else {
+            initKlasifikasi();
+        }
+    })();
 </script>
 @endpush

@@ -329,16 +329,34 @@ class PengajuanTest extends TestCase
         $this->assertEquals(1, $pengajuan->jumlah_keberatan);
     }
 
-    public function test_dashboard_displays_keberatan_rule_notice(): void
+    public function test_keberatan_rule_notice_placement_for_pegawai_and_petugas(): void
     {
         $pegawai = User::factory()->create(['role' => 'pegawai', 'is_aktif' => true]);
 
-        $response = $this->actingAs($pegawai)->get(route('pegawai.dashboard'));
+        // Pada role pegawai: catatan ketentuan keberatan ada di dashboard
+        $responseDashboardPegawai = $this->actingAs($pegawai)->get(route('pegawai.dashboard'));
+        $responseDashboardPegawai->assertStatus(200);
+        $responseDashboardPegawai->assertSee('Ketentuan Keberatan Terhadap Hasil Pengaduan');
+        $responseDashboardPegawai->assertSee('maksimal 1 (satu) kali', false);
+        $responseDashboardPegawai->assertSee('prosedur aduan baru');
 
-        $response->assertStatus(200);
-        $response->assertSee('Ketentuan Keberatan Terhadap Hasil Pengaduan');
-        $response->assertSee('maksimal 1 (satu) kali', false);
-        $response->assertSee('prosedur aduan baru');
+        // Pada role pegawai: catatan ketentuan keberatan TIDAK ada di riwayat pengaduan
+        $responseRiwayatPegawai = $this->actingAs($pegawai)->get(route('pegawai.pengajuan.index'));
+        $responseRiwayatPegawai->assertStatus(200);
+        $responseRiwayatPegawai->assertDontSee('Ketentuan Keberatan Terhadap Hasil Pengaduan');
+
+        // Pada role petugas: catatan ketentuan keberatan TIDAK ada di dashboard petugas
+        $petugas = User::factory()->petugas()->create(['is_aktif' => true]);
+        $responseDashboardPetugas = $this->actingAs($petugas)->get(route('petugas.dashboard'));
+        $responseDashboardPetugas->assertStatus(200);
+        $responseDashboardPetugas->assertDontSee('Ketentuan Keberatan Terhadap Hasil Pengaduan');
+
+        // Pada role petugas: catatan ketentuan keberatan ADA di riwayat aduan (Aduan Saya)
+        $responseRiwayatPetugas = $this->actingAs($petugas)->get(route('petugas.aduan.index'));
+        $responseRiwayatPetugas->assertStatus(200);
+        $responseRiwayatPetugas->assertSee('Ketentuan Keberatan Terhadap Hasil Pengaduan');
+        $responseRiwayatPetugas->assertSee('maksimal 1 (satu) kali', false);
+        $responseRiwayatPetugas->assertSee('prosedur aduan baru');
     }
 
     public function test_pegawai_can_view_index_with_status_filter(): void
@@ -401,7 +419,7 @@ class PengajuanTest extends TestCase
         $response->assertSee('Anda akan menerima notifikasi tindak lanjut berikutnya.');
     }
 
-    public function test_pegawai_can_download_own_pengajuan_pdf(): void
+    public function test_pegawai_detail_does_not_show_pdf_button(): void
     {
         $pegawai = User::factory()->create(['role' => 'pegawai', 'is_aktif' => true]);
         $kategori = Kategori::create(['nama_kategori' => 'Fasilitas', 'aktif' => true]);
@@ -414,34 +432,13 @@ class PengajuanTest extends TestCase
             'status' => 'menunggu',
         ]);
 
-        $response = $this->actingAs($pegawai)->get(route('pegawai.pengajuan.pdf', $pengajuan));
+        $response = $this->actingAs($pegawai)->get(route('pegawai.pengajuan.show', $pengajuan));
 
         $response->assertStatus(200);
-        $response->assertHeader('Content-Type', 'application/pdf');
-        $this->assertNotEmpty($response->getContent());
-        $this->assertStringStartsWith('%PDF-', $response->getContent());
+        $response->assertDontSee('Cetak Bukti (PDF)');
     }
 
-    public function test_pegawai_cannot_download_other_pegawai_pengajuan_pdf(): void
-    {
-        $pegawai1 = User::factory()->create(['role' => 'pegawai', 'is_aktif' => true]);
-        $pegawai2 = User::factory()->create(['role' => 'pegawai', 'is_aktif' => true]);
-        $kategori = Kategori::create(['nama_kategori' => 'Fasilitas', 'aktif' => true]);
-
-        $pengajuan = Pengajuan::create([
-            'user_id' => $pegawai1->id,
-            'kategori_id' => $kategori->id,
-            'deskripsi' => 'Pengaduan pegawai 1.',
-            'metode_identitas' => 'identitas',
-            'status' => 'menunggu',
-        ]);
-
-        $response = $this->actingAs($pegawai2)->get(route('pegawai.pengajuan.pdf', $pengajuan));
-
-        $response->assertStatus(403);
-    }
-
-    public function test_guest_cannot_download_pegawai_pengajuan_pdf(): void
+    public function test_pegawai_pdf_route_is_removed(): void
     {
         $pegawai = User::factory()->create(['role' => 'pegawai', 'is_aktif' => true]);
         $kategori = Kategori::create(['nama_kategori' => 'Fasilitas', 'aktif' => true]);
@@ -449,13 +446,122 @@ class PengajuanTest extends TestCase
         $pengajuan = Pengajuan::create([
             'user_id' => $pegawai->id,
             'kategori_id' => $kategori->id,
-            'deskripsi' => 'Pengaduan pegawai.',
+            'deskripsi' => 'Pengaduan pegawai 1.',
             'metode_identitas' => 'identitas',
             'status' => 'menunggu',
         ]);
 
-        $response = $this->get(route('pegawai.pengajuan.pdf', $pengajuan));
+        $response = $this->actingAs($pegawai)->get("/pegawai/pengajuan/{$pengajuan->id}/pdf");
 
-        $response->assertRedirect(route('login'));
+        $response->assertStatus(404);
+    }
+
+    public function test_complaint_within_3_days_still_requires_confirmation_and_allows_objection(): void
+    {
+        $pegawai = User::factory()->create(['role' => 'pegawai', 'is_aktif' => true]);
+        $kategori = Kategori::create(['nama_kategori' => 'Fasilitas', 'aktif' => true]);
+
+        $pengajuan = Pengajuan::create([
+            'user_id' => $pegawai->id,
+            'kategori_id' => $kategori->id,
+            'deskripsi' => 'Laporan selesai baru 1 hari.',
+            'metode_identitas' => 'identitas',
+            'status' => 'selesai',
+            'tanggal_selesai' => now()->subDay(),
+            'konfirmasi_pelapor' => null,
+            'jumlah_keberatan' => 0,
+        ]);
+
+        $this->assertTrue($pengajuan->perlu_konfirmasi);
+        $this->assertTrue($pengajuan->bisa_ajukan_keberatan);
+        $this->assertFalse($pengajuan->apakah_kadaluarsa_konfirmasi);
+
+        $response = $this->actingAs($pegawai)->get(route('pegawai.pengajuan.show', $pengajuan));
+        $response->assertOk();
+        $response->assertSee('Konfirmasi dari Anda');
+        $response->assertSee('Batas waktu konfirmasi adalah');
+        $response->assertSee('3 hari');
+    }
+
+    public function test_complaint_older_than_3_days_is_automatically_confirmed_by_system(): void
+    {
+        $pegawai = User::factory()->create(['role' => 'pegawai', 'is_aktif' => true]);
+        $kategori = Kategori::create(['nama_kategori' => 'Fasilitas', 'aktif' => true]);
+
+        $pengajuan = Pengajuan::create([
+            'user_id' => $pegawai->id,
+            'kategori_id' => $kategori->id,
+            'deskripsi' => 'Laporan selesai 4 hari lalu tanpa konfirmasi.',
+            'metode_identitas' => 'identitas',
+            'status' => 'selesai',
+            'tanggal_selesai' => now()->subDays(4),
+            'konfirmasi_pelapor' => null,
+            'jumlah_keberatan' => 0,
+        ]);
+
+        $this->assertTrue($pengajuan->apakah_kadaluarsa_konfirmasi);
+        $this->assertFalse($pengajuan->perlu_konfirmasi);
+        $this->assertFalse($pengajuan->bisa_ajukan_keberatan);
+
+        // Jalankan perintah auto-confirm
+        $this->artisan('pengaduan:auto-confirm')
+            ->expectsOutputToContain('Berhasil mengonfirmasi 1 pengaduan secara otomatis.')
+            ->assertExitCode(0);
+
+        $pengajuan->refresh();
+        $this->assertSame('otomatis', $pengajuan->konfirmasi_pelapor);
+        $this->assertNotNull($pengajuan->dikonfirmasi_pada);
+
+        $this->assertDatabaseHas('riwayat_status', [
+            'pengajuan_id' => $pengajuan->id,
+            'status_baru' => 'selesai',
+            'diubah_oleh' => null,
+        ]);
+
+        $this->assertDatabaseHas('notifikasi', [
+            'user_id' => $pegawai->id,
+            'pengajuan_id' => $pengajuan->id,
+            'judul' => 'Laporan Dikonfirmasi Otomatis',
+        ]);
+    }
+
+    public function test_pegawai_cannot_manually_confirm_or_object_expired_complaint(): void
+    {
+        $pegawai = User::factory()->create(['role' => 'pegawai', 'is_aktif' => true]);
+        $kategori = Kategori::create(['nama_kategori' => 'Fasilitas', 'aktif' => true]);
+
+        $pengajuan = Pengajuan::create([
+            'user_id' => $pegawai->id,
+            'kategori_id' => $kategori->id,
+            'deskripsi' => 'Laporan sudah kadaluarsa 5 hari lalu.',
+            'metode_identitas' => 'identitas',
+            'status' => 'selesai',
+            'tanggal_selesai' => now()->subDays(5),
+            'konfirmasi_pelapor' => null,
+            'jumlah_keberatan' => 0,
+        ]);
+
+        // Mencoba konfirmasi manual setelah lewat 3 hari
+        $responseKonfirmasi = $this->actingAs($pegawai)->post(route('pegawai.pengajuan.konfirmasi', $pengajuan));
+        $responseKonfirmasi->assertSessionHas('info');
+        $this->assertSame('otomatis', $pengajuan->fresh()->konfirmasi_pelapor);
+
+        // Reset untuk uji keberatan
+        $pengajuan2 = Pengajuan::create([
+            'user_id' => $pegawai->id,
+            'kategori_id' => $kategori->id,
+            'deskripsi' => 'Laporan kadaluarsa keberatan.',
+            'metode_identitas' => 'identitas',
+            'status' => 'selesai',
+            'tanggal_selesai' => now()->subDays(5),
+            'konfirmasi_pelapor' => null,
+            'jumlah_keberatan' => 0,
+        ]);
+
+        $responseKeberatan = $this->actingAs($pegawai)->post(route('pegawai.pengajuan.keberatan', $pengajuan2), [
+            'alasan' => 'Mencoba mengajukan keberatan setelah lewat batas 3 hari.',
+        ]);
+        $responseKeberatan->assertSessionHas('error');
+        $this->assertSame('otomatis', $pengajuan2->fresh()->konfirmasi_pelapor);
     }
 }

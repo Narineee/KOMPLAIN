@@ -9,14 +9,12 @@ use App\Models\Notifikasi;
 use App\Models\Pengajuan;
 use App\Models\RiwayatStatus;
 use App\Models\Tanggapan;
-use App\Services\PdfService;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
-use Symfony\Component\HttpFoundation\Response;
 
 class PengajuanController extends Controller
 {
@@ -25,6 +23,9 @@ class PengajuanController extends Controller
      */
     public function dashboard(Request $request): View
     {
+        // Proses aduan selesai yang melewati batas waktu 3 hari tanpa konfirmasi
+        Pengajuan::prosesAutoKonfirmasiKadaluarsa();
+
         $userId = $request->user()->id;
 
         $menungguKonfirmasi = Pengajuan::with('kategori.parent')
@@ -228,6 +229,7 @@ class PengajuanController extends Controller
         $pengajuan->load([
             'kategori.parent',
             'user.unit',
+            'assignedUnit',
             'lampirans',
             'riwayatStatuses',
             'tanggapans' => fn ($query) => $query->where('is_internal', false)->with('user.unit')->latest(),
@@ -239,37 +241,17 @@ class PengajuanController extends Controller
     }
 
     /**
-     * Mencetak bukti pengaduan pegawai ke format PDF menggunakan mPDF.
-     */
-    public function pengajuanPdf(Pengajuan $pengajuan, PdfService $pdfService): Response
-    {
-        if ($pengajuan->user_id !== Auth::id()) {
-            abort(403, 'Anda tidak berhak mencetak rincian laporan ini.');
-        }
-
-        $pengajuan->load([
-            'kategori.parent',
-            'user.unit',
-            'lampirans',
-            'riwayatStatuses',
-            'tanggapans' => fn ($query) => $query->where('is_internal', false)->with('user.unit')->latest(),
-        ]);
-
-        $html = view('pegawai.pengajuan.show_pdf', [
-            'pengajuan' => $pengajuan,
-        ])->render();
-
-        $filename = 'bukti_pengaduan_'.$pengajuan->id.'_'.date('Ymd_His').'.pdf';
-
-        return $pdfService->render($html, $filename, 'P', 'A4');
-    }
-
-    /**
      * [BARU] Pelapor mengonfirmasi bahwa laporan benar-benar sudah selesai.
      */
     public function konfirmasi(Pengajuan $pengajuan): RedirectResponse
     {
         abort_unless($pengajuan->user_id === Auth::id(), 403);
+
+        if ($pengajuan->apakah_kadaluarsa_konfirmasi) {
+            Pengajuan::prosesAutoKonfirmasiKadaluarsa();
+
+            return back()->with('info', 'Batas waktu konfirmasi 3 hari telah berakhir. Laporan telah diselesaikan secara otomatis oleh sistem.');
+        }
 
         if (! $pengajuan->perlu_konfirmasi) {
             return back()->with('info', 'Laporan ini tidak sedang menunggu konfirmasi.');
@@ -302,6 +284,13 @@ class PengajuanController extends Controller
     {
         abort_unless($pengajuan->user_id === Auth::id(), 403);
 
+        if ($pengajuan->apakah_kadaluarsa_konfirmasi) {
+            Pengajuan::prosesAutoKonfirmasiKadaluarsa();
+
+            return redirect()->route('pegawai.pengajuan.show', $pengajuan)
+                ->with('error', 'Batas waktu 3 hari untuk konfirmasi atau pengajuan keberatan telah berakhir. Laporan telah diselesaikan secara otomatis.');
+        }
+
         if (! $pengajuan->bisa_ajukan_keberatan) {
             $pesan = ($pengajuan->jumlah_keberatan ?? 0) >= 1
                 ? 'Pengajuan keberatan hanya dapat dilakukan maksimal 1 (satu) kali per pengaduan. Jika kendala masih berlanjut, silakan ajukan pengaduan baru.'
@@ -324,6 +313,13 @@ class PengajuanController extends Controller
     public function keberatan(Request $request, Pengajuan $pengajuan): RedirectResponse
     {
         abort_unless($pengajuan->user_id === Auth::id(), 403);
+
+        if ($pengajuan->apakah_kadaluarsa_konfirmasi) {
+            Pengajuan::prosesAutoKonfirmasiKadaluarsa();
+
+            return redirect()->route('pegawai.pengajuan.show', $pengajuan)
+                ->with('error', 'Batas waktu 3 hari untuk konfirmasi atau pengajuan keberatan telah berakhir. Laporan telah diselesaikan secara otomatis.');
+        }
 
         if (! $pengajuan->bisa_ajukan_keberatan) {
             $pesan = ($pengajuan->jumlah_keberatan ?? 0) >= 1
@@ -377,7 +373,7 @@ class PengajuanController extends Controller
                 'status_sebelumnya' => 'selesai',
                 'status_baru' => 'diproses',
                 'sub_status_sebelumnya' => $subLama,
-                'sub_status_baru' => 'klarifikasi',
+                'sub_status_baru' => 'identifikasi_klarifikasi',
                 'catatan' => 'Keberatan dari pelapor: '.$validated['alasan'],
             ]);
 

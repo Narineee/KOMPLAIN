@@ -112,6 +112,16 @@
                     <div class="absolute right-0 mt-2 w-64 rounded-2xl bg-white border border-slate-200 shadow-lg p-4 z-40">
                         <p class="text-sm font-bold text-slate-900 truncate">{{ $authUser->name }}</p>
                         <p class="text-xs text-slate-500 mt-0.5">NIP {{ $authUser->nip ?? '-' }}</p>
+                        @if ($authUser->isPetugas())
+                            <div class="mt-3 pt-2.5 border-t border-slate-100">
+                                <a href="{{ route('petugas.dashboard') }}" class="flex items-center gap-2 text-xs font-semibold text-amber-700 hover:text-amber-800">
+                                    <svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                    </svg>
+                                    <span>Panel Tugas Petugas Bidang</span>
+                                </a>
+                            </div>
+                        @endif
                         <form action="{{ route('logout') }}" method="POST" class="mt-4 pt-3 border-t border-slate-100">
                             @csrf
                             <button type="submit" class="w-full text-left text-sm font-semibold text-rose-600 hover:text-rose-700">

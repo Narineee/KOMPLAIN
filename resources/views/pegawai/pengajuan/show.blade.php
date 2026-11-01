@@ -74,7 +74,9 @@
                 ? 'Admin telah menyelesaikan penanganan setelah proses tinjau ulang.'
                 : ($p->konfirmasi_pelapor === 'dikonfirmasi' && $p->dikonfirmasi_pada
                     ? 'Anda mengonfirmasi penyelesaian pada '.$p->dikonfirmasi_pada->locale('id')->translatedFormat('d F Y').'.'
-                    : null)];
+                    : ($p->konfirmasi_pelapor === 'otomatis' && $p->dikonfirmasi_pada
+                        ? 'Dikonfirmasi selesai secara otomatis oleh sistem pada '.$p->dikonfirmasi_pada->locale('id')->translatedFormat('d F Y').' (melewati batas waktu 3 hari).'
+                        : null))];
     } elseif ($p->status === 'belum_verifikasi') {
         $banner = ['bg-rose-50 border-rose-200', 'text-rose-700', 'text-rose-800', 'M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z',
             'Menunggu Verifikasi Admin', 'Aduan Anda telah diajukan dan belum dibuka/diverifikasi oleh tim admin.'];
@@ -104,24 +106,14 @@
 <div class="max-w-2xl mx-auto space-y-4">
 
     <div>
-        <div class="flex items-start justify-between gap-4">
-            <div>
-                <h1 class="text-2xl font-bold leading-snug text-slate-900">{{ $p->kategori?->nama_kategori ?? 'Pengaduan #'.$p->id }}</h1>
-                <div class="mt-3 flex flex-wrap items-center gap-2">
-                    <x-pengadu.status-chip :pengajuan="$p" />
-                    @if ($p->is_anonim)
-                        <span class="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700">Anonim</span>
-                    @endif
-                </div>
+        <div>
+            <h1 class="text-2xl font-bold leading-snug text-slate-900">{{ $p->kategori?->nama_kategori ?? 'Pengaduan #'.$p->id }}</h1>
+            <div class="mt-3 flex flex-wrap items-center gap-2">
+                <x-pengadu.status-chip :pengajuan="$p" />
+                @if ($p->is_anonim)
+                    <span class="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700">Anonim</span>
+                @endif
             </div>
-            <a href="{{ route('pegawai.pengajuan.pdf', $p) }}"
-               target="_blank"
-               class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition shadow-xs shrink-0">
-                <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Cetak Bukti (PDF)
-            </a>
         </div>
         <p class="mt-3 text-sm text-slate-500">
             Diajukan {{ $p->created_at->locale('id')->translatedFormat('d F Y · H.i') }} {{ $tz }} · #{{ $p->id }}
@@ -160,6 +152,14 @@
                 <dt class="text-xs text-slate-500">Klasifikasi</dt>
                 <dd class="mt-0.5 text-[15px] font-semibold text-slate-900">{{ $p->nama_kategori_lengkap }}</dd>
             </div>
+            @if ($p->assignedUnit)
+                <div>
+                    <dt class="text-xs text-slate-500">Bidang Penanganan</dt>
+                    <dd class="mt-0.5 text-[15px] font-semibold text-slate-900">
+                        🏢 {{ $p->assignedUnit->nama_unit }}
+                    </dd>
+                </div>
+            @endif
             <div>
                 <dt class="text-xs text-slate-500">Pengadu</dt>
                 <dd class="mt-0.5 text-[15px] font-semibold text-slate-900">
@@ -262,7 +262,7 @@
                     <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white" aria-hidden="true">{{ $inisial($namaAdmin) }}</span>
                     <div>
                         <p class="text-sm font-bold text-slate-900">{{ $namaAdmin }}</p>
-                        <p class="text-xs text-slate-500">Admin{{ $t->user?->unit ? ' · '.$t->user->unit->nama_unit : '' }}</p>
+                        <p class="text-xs text-slate-500">{{ ($t->user && $t->user->isPetugas()) ? 'Petugas Bidang' : 'Admin' }}{{ $t->user?->unit ? ' · '.$t->user->unit->nama_unit : '' }}</p>
                     </div>
                 </div>
                 <p class="mt-3 whitespace-pre-line text-[15px] leading-relaxed text-slate-800">{{ $t->isi_tanggapan ?? $t->pesan }}</p>

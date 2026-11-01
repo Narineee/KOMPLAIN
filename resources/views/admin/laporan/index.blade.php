@@ -1,88 +1,12 @@
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="h-full bg-slate-50">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Semua Laporan Pengaduan - Admin KOMPLAIN</title>
+@extends('layouts.admin')
 
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700" rel="stylesheet" />
+@section('title', 'Semua Laporan Pengaduan')
 
-    <!-- Scripts & Styles via Vite -->
-    @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
-    @else
-        <script src="https://cdn.tailwindcss.com"></script>
-    @endif
-</head>
-<body class="min-h-full flex flex-col text-slate-800 antialiased selection:bg-indigo-500 selection:text-white">
-    <!-- Navbar Admin -->
-    <nav class="bg-indigo-900 text-white sticky top-0 z-30 shadow-md">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16">
-                <div class="flex items-center gap-3">
-                    <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-2">
-                        <div class="w-9 h-9 rounded-lg bg-indigo-700 flex items-center justify-center font-bold text-lg text-white">
-                            K
-                        </div>
-                        <div>
-                            <span class="font-bold text-base leading-tight block">KOMPLAIN</span>
-                            <span class="text-[10px] text-indigo-300 block font-medium">Panel Administrator</span>
-                        </div>
-                    </a>
-
-                    <div class="hidden md:flex items-center gap-1 ml-8">
-                        <a href="{{ route('admin.dashboard') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-200 hover:text-white hover:bg-indigo-800/60 transition">
-                            Dashboard
-                        </a>
-                        <a href="{{ route('admin.laporan.index') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-800 text-white">
-                            Semua Laporan
-                        </a>
-                        <a href="{{ route('admin.kategori.index') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-200 hover:text-white hover:bg-indigo-800/60 transition">
-                            Klasifikasi
-                        </a>
-                        <a href="{{ route('admin.pegawai.index') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-200 hover:text-white hover:bg-indigo-800/60 transition">
-                            Pengguna
-                        </a>
-                        <a href="{{ route('admin.rekap') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-200 hover:text-white hover:bg-indigo-800/60 transition">
-                            Rekap
-                        </a>
-                    </div>
-                </div>
-
-                <div class="flex items-center gap-4">
-                    <div class="text-right hidden sm:block">
-                        <span class="block text-xs font-semibold text-white">{{ auth()->user()->name }}</span>
-                        <span class="block text-[10px] text-indigo-300">Administrator ({{ auth()->user()->email }})</span>
-                    </div>
-
-                    <form action="{{ route('logout') }}" method="POST" class="inline">
-                        @csrf
-                        <button type="submit" class="py-1.5 px-3 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white transition shadow-sm">
-                            Keluar
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </nav>
-
-    <!-- Main Content -->
-    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <!-- Flash Messages -->
-        @if (session('success'))
-            <div class="mb-6 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm flex items-center gap-2 shadow-sm">
-                <svg class="w-5 h-5 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>{{ session('success') }}</span>
-            </div>
-        @endif
-
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+@section('content')
+    <div class="space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-                <h1 class="text-2xl font-bold text-slate-900">Manajemen Pengaduan</h1>
+                <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Manajemen Pengaduan</h1>
                 <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Daftar seluruh aduan masuk dari pegawai beserta status tindak lanjut.</p>
             </div>
             <div class="flex items-center gap-2">
@@ -97,7 +21,7 @@
         <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm mb-6">
             <form action="{{ route('admin.laporan.index') }}" method="GET" class="space-y-4">
                 <!-- Baris 1: Parameter Utama -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                     <!-- Search -->
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1">Cari Laporan</label>
@@ -132,6 +56,19 @@
                             @foreach ($kategoris as $kat)
                                 <option value="{{ $kat->id }}" {{ ($filter['kategori_id'] ?? '') == $kat->id ? 'selected' : '' }}>
                                     {{ $kat->nama_lengkap }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <!-- Bidang Tugas -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Bidang Tugas</label>
+                        <select name="assigned_unit_id" class="w-full text-xs rounded-xl border border-slate-300 px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600">
+                            <option value="">-- Semua Bidang --</option>
+                            @foreach ($units as $u)
+                                <option value="{{ $u->id }}" {{ ($filter['assigned_unit_id'] ?? '') == $u->id ? 'selected' : '' }}>
+                                    {{ $u->nama_unit }}
                                 </option>
                             @endforeach
                         </select>
@@ -257,6 +194,11 @@
                                     <span class="px-2 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-700 block w-fit">
                                         {{ $lap->nama_kategori_lengkap }}
                                     </span>
+                                    @if ($lap->assignedUnit)
+                                        <span class="mt-1 text-[10px] font-semibold text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-200/60 block w-fit">
+                                            🏢 {{ $lap->assignedUnit->nama_unit }}
+                                        </span>
+                                    @endif
                                 </td>
                                 <td class="py-3.5 px-4 max-w-xs">
                                     <span class="text-xs text-slate-800 font-medium block">
@@ -312,12 +254,9 @@
                 </div>
             @endif
         </div>
-    </main>
+    </div>
 
-    <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-400 mt-10">
-        Panel Administrator KOMPLAIN &copy; {{ date('Y') }}
-    </footer>
-
+@push('scripts')
     <script>
         function updateLiveClock() {
             const el = document.getElementById('live-clock');
@@ -329,5 +268,5 @@
         updateLiveClock();
         setInterval(updateLiveClock, 1000);
     </script>
-</body>
-</html>
+@endpush
+@endsection

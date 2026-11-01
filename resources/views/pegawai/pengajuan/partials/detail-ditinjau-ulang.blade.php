@@ -110,29 +110,19 @@
 
     <!-- Header Informasi Aduan -->
     <div>
-        <div class="flex items-start justify-between gap-4">
-            <div>
-                <p class="text-xs sm:text-sm font-semibold tracking-wide text-blue-600">
-                    {{ $kodeTiket }}
-                </p>
-                <h1 class="mt-1 text-2xl font-bold leading-tight text-slate-900">
-                    {{ $p->nama_kategori_lengkap }}
-                </h1>
-                <div class="mt-2.5 flex flex-wrap items-center gap-2">
-                    <x-pengadu.status-chip :pengajuan="$p" />
-                    @if ($p->is_anonim)
-                        <span class="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700">Anonim</span>
-                    @endif
-                </div>
+        <div>
+            <p class="text-xs sm:text-sm font-semibold tracking-wide text-blue-600">
+                {{ $kodeTiket }}
+            </p>
+            <h1 class="mt-1 text-2xl font-bold leading-tight text-slate-900">
+                {{ $p->nama_kategori_lengkap }}
+            </h1>
+            <div class="mt-2.5 flex flex-wrap items-center gap-2">
+                <x-pengadu.status-chip :pengajuan="$p" />
+                @if ($p->is_anonim)
+                    <span class="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700">Anonim</span>
+                @endif
             </div>
-            <a href="{{ route('pegawai.pengajuan.pdf', $p) }}"
-               target="_blank"
-               class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition shadow-xs shrink-0">
-                <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Cetak Bukti (PDF)
-            </a>
         </div>
         <p class="mt-2.5 text-xs sm:text-sm text-slate-400">
             Diajukan {{ $p->created_at->locale('id')->translatedFormat('d F Y · H.i') }} {{ $tz }}

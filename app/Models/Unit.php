@@ -18,4 +18,14 @@ class Unit extends Model
     {
         return $this->hasMany(User::class);
     }
+
+    public function petugas(): HasMany
+    {
+        return $this->hasMany(User::class)->where('role', 'petugas');
+    }
+
+    public function pengajuans(): HasMany
+    {
+        return $this->hasMany(Pengajuan::class, 'assigned_unit_id');
+    }
 }

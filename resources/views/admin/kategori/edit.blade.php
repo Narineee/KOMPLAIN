@@ -1,75 +1,9 @@
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="h-full bg-slate-50">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Edit Klasifikasi - Admin KOMPLAIN</title>
+@extends('layouts.admin')
 
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700" rel="stylesheet" />
+@section('title', 'Edit Klasifikasi')
 
-    <!-- Scripts & Styles via Vite -->
-    @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
-    @else
-        <script src="https://cdn.tailwindcss.com"></script>
-    @endif
-</head>
-<body class="min-h-full flex flex-col text-slate-800 antialiased selection:bg-indigo-500 selection:text-white">
-    <!-- Navbar Admin -->
-    <nav class="bg-indigo-900 text-white sticky top-0 z-30 shadow-md">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16">
-                <div class="flex items-center gap-3">
-                    <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-2">
-                        <div class="w-9 h-9 rounded-lg bg-indigo-700 flex items-center justify-center font-bold text-lg text-white">
-                            K
-                        </div>
-                        <div>
-                            <span class="font-bold text-base leading-tight block">KOMPLAIN</span>
-                            <span class="text-[10px] text-indigo-300 block font-medium">Panel Administrator</span>
-                        </div>
-                    </a>
-
-                    <div class="hidden md:flex items-center gap-1 ml-8">
-                        <a href="{{ route('admin.dashboard') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-200 hover:text-white hover:bg-indigo-800/60 transition">
-                            Dashboard
-                        </a>
-                        <a href="{{ route('admin.laporan.index') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-200 hover:text-white hover:bg-indigo-800/60 transition">
-                            Semua Laporan
-                        </a>
-                        <a href="{{ route('admin.kategori.index') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-800 text-white">
-                            Klasifikasi
-                        </a>
-                        <a href="{{ route('admin.pegawai.index') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-200 hover:text-white hover:bg-indigo-800/60 transition">
-                            Pengguna
-                        </a>
-                        <a href="{{ route('admin.rekap') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-200 hover:text-white hover:bg-indigo-800/60 transition">
-                            Rekap
-                        </a>
-                    </div>
-                </div>
-
-                <div class="flex items-center gap-4">
-                    <div class="text-right hidden sm:block">
-                        <span class="block text-xs font-semibold text-white">{{ auth()->user()->name }}</span>
-                        <span class="block text-[10px] text-indigo-300">Administrator ({{ auth()->user()->email }})</span>
-                    </div>
-
-                    <form action="{{ route('logout') }}" method="POST" class="inline">
-                        @csrf
-                        <button type="submit" class="py-1.5 px-3 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white transition shadow-sm">
-                            Keluar
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </nav>
-
-    <!-- Main Content -->
-    <main class="flex-1 max-w-3xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+@section('content')
+    <div class="max-w-3xl mx-auto">
         <div class="mb-6">
             <a href="{{ route('admin.kategori.index') }}" class="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -82,25 +16,6 @@
         <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 sm:p-8">
             <h1 class="text-xl sm:text-2xl font-bold text-slate-900 mb-2">Edit Klasifikasi</h1>
             <p class="text-xs sm:text-sm text-slate-500 mb-6">Perbarui nama, hierarki klasifikasi induk, penjelasan/keterangan, atau status aktif klasifikasi.</p>
-
-            @if (session('error'))
-                <div class="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs sm:text-sm flex items-center gap-2 shadow-sm">
-                    <svg class="w-5 h-5 text-rose-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span>{{ session('error') }}</span>
-                </div>
-            @endif
-
-            @if ($errors->any())
-                <div class="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs sm:text-sm">
-                    <ul class="list-disc list-inside space-y-1">
-                        @foreach ($errors->all() as $err)
-                            <li>{{ $err }}</li>
-                        @endforeach
-                    </ul>
-                </div>
-            @endif
 
             <form action="{{ route('admin.kategori.update', $kategori) }}" method="POST" class="space-y-5">
                 @csrf
@@ -167,10 +82,5 @@
                 </div>
             </form>
         </div>
-    </main>
-
-    <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-400 mt-10">
-        Panel Administrator KOMPLAIN &copy; {{ date('Y') }}
-    </footer>
-</body>
-</html>
+    </div>
+@endsection

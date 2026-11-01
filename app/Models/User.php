@@ -11,9 +11,26 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Carbon;
 
 #[Fillable(['nip', 'nama', 'name', 'email', 'password', 'role', 'unit_id', 'status_akun', 'is_aktif'])]
 #[Hidden(['password', 'remember_token'])]
+/**
+ * @property int $id
+ * @property string $nip
+ * @property string $nama
+ * @property string|null $name
+ * @property string $email
+ * @property string $password
+ * @property string $role
+ * @property int|null $unit_id
+ * @property string $status_akun
+ * @property bool $is_aktif
+ * @property string|null $remember_token
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property-read Unit|null $unit
+ */
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
@@ -77,13 +94,23 @@ class User extends Authenticatable
         return $this->role === 'admin';
     }
 
+    public function isPetugas(): bool
+    {
+        return $this->role === 'petugas';
+    }
+
     public function isPegawai(): bool
     {
-        return in_array($this->role, ['pegawai', 'pengadu'], true);
+        return in_array($this->role, ['pegawai', 'pengadu', 'petugas'], true);
     }
 
     public function isPengadu(): bool
     {
-        return in_array($this->role, ['pegawai', 'pengadu'], true);
+        return in_array($this->role, ['pegawai', 'pengadu', 'petugas'], true);
+    }
+
+    public function pengajuanDitugaskan(): HasMany
+    {
+        return $this->hasMany(Pengajuan::class, 'petugas_id');
     }
 }

@@ -173,7 +173,9 @@
         </tr>
         <tr>
             <td><strong>Klasifikasi Kategori:</strong></td>
-            <td colspan="3"><strong>{{ $pengajuan->nama_kategori_lengkap }}</strong></td>
+            <td><strong>{{ $pengajuan->nama_kategori_lengkap }}</strong></td>
+            <td><strong>Bidang Penanganan:</strong></td>
+            <td><strong>{{ $pengajuan->assignedUnit?->nama_unit ?? 'Belum Ditugaskan' }}</strong>{{ $pengajuan->petugas ? ' ('.$pengajuan->petugas->name.')' : '' }}</td>
         </tr>
         <tr>
             <td><strong>Status Pelapor:</strong></td>

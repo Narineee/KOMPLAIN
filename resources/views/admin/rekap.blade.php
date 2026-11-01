@@ -1,76 +1,8 @@
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="h-full bg-slate-50">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Rekapitulasi Pengaduan - Admin KOMPLAIN</title>
+@extends('layouts.admin')
 
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700" rel="stylesheet" />
+@section('title', 'Rekapitulasi Pengaduan')
 
-    <!-- Scripts & Styles via Vite -->
-    @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
-    @else
-        <script src="https://cdn.tailwindcss.com"></script>
-    @endif
-
-</head>
-<body class="min-h-full flex flex-col text-slate-800 antialiased selection:bg-indigo-500 selection:text-white">
-    <!-- Navbar Admin (Disembunyikan saat dicetak) -->
-    <nav class="bg-indigo-900 text-white sticky top-0 z-30 shadow-md no-print">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16">
-                <div class="flex items-center gap-3">
-                    <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-2">
-                        <div class="w-9 h-9 rounded-lg bg-indigo-700 flex items-center justify-center font-bold text-lg text-white">
-                            K
-                        </div>
-                        <div>
-                            <span class="font-bold text-base leading-tight block">KOMPLAIN</span>
-                            <span class="text-[10px] text-indigo-300 block font-medium">Panel Administrator</span>
-                        </div>
-                    </a>
-
-                    <div class="hidden md:flex items-center gap-1 ml-8">
-                        <a href="{{ route('admin.dashboard') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-200 hover:text-white hover:bg-indigo-800/60 transition">
-                            Dashboard
-                        </a>
-                        <a href="{{ route('admin.laporan.index') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-200 hover:text-white hover:bg-indigo-800/60 transition">
-                            Semua Laporan
-                        </a>
-                        <a href="{{ route('admin.kategori.index') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-200 hover:text-white hover:bg-indigo-800/60 transition">
-                            Klasifikasi
-                        </a>
-                        <a href="{{ route('admin.pegawai.index') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-200 hover:text-white hover:bg-indigo-800/60 transition">
-                            Pengguna
-                        </a>
-                        <a href="{{ route('admin.rekap') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-800 text-white">
-                            Rekap
-                        </a>
-                    </div>
-                </div>
-
-                <div class="flex items-center gap-4">
-                    <div class="text-right hidden sm:block">
-                        <span class="block text-xs font-semibold text-white">{{ auth()->user()->name ?? auth()->user()->nama }}</span>
-                        <span class="block text-[10px] text-indigo-300">Administrator ({{ auth()->user()->email }})</span>
-                    </div>
-
-                    <form action="{{ route('logout') }}" method="POST" class="inline">
-                        @csrf
-                        <button type="submit" class="py-1.5 px-3 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white transition shadow-sm">
-                            Keluar
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </nav>
-
-    <!-- Main Content -->
-    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+@section('content')
         <!-- Page Header (Web Screen) -->
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
             <div>
@@ -337,6 +269,11 @@
                                     <span class="px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-800">
                                         {{ $lap->kategori->nama_kategori ?? $lap->kategori->nama ?? '-' }}
                                     </span>
+                                    @if ($lap->assignedUnit)
+                                        <span class="mt-1 text-[10px] font-semibold text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-200/60 block w-fit">
+                                            🏢 {{ $lap->assignedUnit->nama_unit }}
+                                        </span>
+                                    @endif
                                 </td>
                                 <td class="py-3.5 px-4 max-w-xs sm:max-w-md">
                                     <span class="text-xs text-slate-800 font-medium block">
@@ -398,13 +335,6 @@
                 </table>
             </div>
         </div>
-    </main>
-
-    <!-- Footer Web -->
-    <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-400 mt-10">
-        Panel Administrator KOMPLAIN &copy; {{ date('Y') }}
-    </footer>
-
     <script>
         function updateLiveClock() {
             const el = document.getElementById('live-clock');
@@ -416,5 +346,4 @@
         updateLiveClock();
         setInterval(updateLiveClock, 1000);
     </script>
-</body>
-</html>
+@endsection

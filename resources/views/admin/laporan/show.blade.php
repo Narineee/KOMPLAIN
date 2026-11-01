@@ -1,125 +1,23 @@
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="h-full bg-slate-50">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+@extends('layouts.admin')
+
+@section('title', 'Detail Pengaduan #' . $pengajuan->id)
+
+@push('head')
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Detail Pengaduan #{{ $pengajuan->id }} - Admin KOMPLAIN</title>
+@endpush
 
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700" rel="stylesheet" />
+@section('content')
+    <!-- Breadcrumb & Back -->
+    <div class="mb-6">
+        <a href="{{ route('admin.laporan.index') }}" class="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Kembali ke Daftar Laporan
+        </a>
+    </div>
 
-    <!-- Scripts & Styles via Vite -->
-    @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
-    @else
-        <script src="https://cdn.tailwindcss.com"></script>
-    @endif
-</head>
-<body class="min-h-full flex flex-col text-slate-800 antialiased selection:bg-indigo-500 selection:text-white">
-    <!-- Navbar Admin -->
-    <nav class="bg-indigo-900 text-white sticky top-0 z-30 shadow-md">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16">
-                <div class="flex items-center gap-3">
-                    <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-2">
-                        <div class="w-9 h-9 rounded-lg bg-indigo-700 flex items-center justify-center font-bold text-lg text-white">
-                            K
-                        </div>
-                        <div>
-                            <span class="font-bold text-base leading-tight block">KOMPLAIN</span>
-                            <span class="text-[10px] text-indigo-300 block font-medium">Panel Administrator</span>
-                        </div>
-                    </a>
-
-                    <div class="hidden md:flex items-center gap-1 ml-8">
-                        <a href="{{ route('admin.dashboard') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-200 hover:text-white hover:bg-indigo-800/60 transition">
-                            Dashboard
-                        </a>
-                        <a href="{{ route('admin.laporan.index') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-800 text-white">
-                            Semua Laporan
-                        </a>
-                        <a href="{{ route('admin.kategori.index') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-200 hover:text-white hover:bg-indigo-800/60 transition">
-                            Klasifikasi
-                        </a>
-                        <a href="{{ route('admin.pegawai.index') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-200 hover:text-white hover:bg-indigo-800/60 transition">
-                            Pengguna
-                        </a>
-                        <a href="{{ route('admin.rekap') }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-200 hover:text-white hover:bg-indigo-800/60 transition">
-                            Rekap
-                        </a>
-                    </div>
-                </div>
-
-                <div class="flex items-center gap-4">
-                    <div class="text-right hidden sm:block">
-                        <span class="block text-xs font-semibold text-white">{{ auth()->user()->name }}</span>
-                        <span class="block text-[10px] text-indigo-300">Administrator ({{ auth()->user()->email }})</span>
-                    </div>
-
-                    <form action="{{ route('logout') }}" method="POST" class="inline">
-                        @csrf
-                        <button type="submit" class="py-1.5 px-3 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white transition shadow-sm">
-                            Keluar
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </nav>
-
-    <!-- Main Content -->
-    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <!-- Breadcrumb & Back -->
-        <div class="mb-6">
-            <a href="{{ route('admin.laporan.index') }}" class="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
-                Kembali ke Daftar Laporan
-            </a>
-        </div>
-
-        <!-- Flash Messages -->
-        @if (session('success'))
-            <div class="mb-6 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm flex items-center gap-2 shadow-sm">
-                <svg class="w-5 h-5 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>{{ session('success') }}</span>
-            </div>
-        @endif
-
-        @if (session('info'))
-            <div class="mb-6 p-4 rounded-xl bg-blue-50 border border-blue-200 text-blue-800 text-sm flex items-center gap-2 shadow-sm">
-                <svg class="w-5 h-5 text-blue-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>{{ session('info') }}</span>
-            </div>
-        @endif
-
-        @if (session('error'))
-            <div class="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm flex items-center gap-2 shadow-sm">
-                <svg class="w-5 h-5 text-rose-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>{{ session('error') }}</span>
-            </div>
-        @endif
-
-        @if ($errors->any())
-            <div class="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs sm:text-sm">
-                <ul class="list-disc list-inside space-y-1">
-                    @foreach ($errors->all() as $err)
-                        <li>{{ $err }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
-
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <!-- Kolom Kiri (2 Kolom): Detail Laporan, Tanggapan, Riwayat -->
             <div class="lg:col-span-2 space-y-6">
                 <!-- Rincian Laporan -->
@@ -356,6 +254,106 @@
                     </form>
                 </div>
 
+                <!-- Box Penugasan Petugas Bidang -->
+                <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6">
+                    <h2 class="text-sm font-bold text-slate-900 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100 flex items-center justify-between">
+                        <span class="flex items-center gap-2">
+                            <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                            </svg>
+                            Penugasan Bidang
+                        </span>
+                        @if ($pengajuan->assignedUnit)
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                Sudah Ditugaskan
+                            </span>
+                        @else
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                                Belum Ditugaskan
+                            </span>
+                        @endif
+                    </h2>
+
+                    @if ($pengajuan->assignedUnit)
+                        <div class="mb-4 p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1.5">
+                            <div>
+                                <span class="text-slate-400 block font-medium">Bidang Berwenang:</span>
+                                <span class="text-slate-800 font-bold block">{{ $pengajuan->assignedUnit->nama_unit }}</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-400 block font-medium">Petugas Ditunjuk:</span>
+                                <span class="text-slate-800 font-semibold block">{{ $pengajuan->petugas->name ?? $pengajuan->petugas->nama ?? '(Belum ada petugas spesifik / seluruh petugas bidang)' }}</span>
+                            </div>
+                            @if ($pengajuan->catatan_penugasan)
+                                <div class="pt-1 border-t border-slate-200/60">
+                                    <span class="text-slate-400 block font-medium">Instruksi Admin:</span>
+                                    <span class="text-slate-700 italic block">{{ $pengajuan->catatan_penugasan }}</span>
+                                </div>
+                            @endif
+                        </div>
+                    @endif
+
+                    <form action="{{ route('admin.laporan.tugaskan', $pengajuan) }}" method="POST" class="space-y-4">
+                        @csrf
+                        @method('PATCH')
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">
+                                Pilih Bidang Tugas <span class="text-rose-500">*</span>
+                            </label>
+                            <select name="assigned_unit_id"
+                                    id="select-assigned-unit"
+                                    required
+                                    onchange="filterPetugasByUnit(this.value)"
+                                    class="w-full text-xs rounded-xl border border-slate-300 p-2.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium">
+                                <option value="">-- Pilih Bidang / Unit Terkait --</option>
+                                @foreach ($units as $unit)
+                                    <option value="{{ $unit->id }}" {{ (old('assigned_unit_id', $pengajuan->assigned_unit_id) == $unit->id) ? 'selected' : '' }}>
+                                        {{ $unit->nama_unit }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">
+                                Pilih Petugas Bidang <span class="text-[10px] text-slate-400 font-normal">(Opsional)</span>
+                            </label>
+                            <select name="petugas_id"
+                                    id="select-petugas-id"
+                                    class="w-full text-xs rounded-xl border border-slate-300 p-2.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium">
+                                <option value="">-- Tugaskan ke Bidang (Semua Petugas) --</option>
+                                @foreach ($petugasList as $petugas)
+                                    <option value="{{ $petugas->id }}" data-unit="{{ $petugas->unit_id }}" {{ (old('petugas_id', $pengajuan->petugas_id) == $petugas->id) ? 'selected' : '' }}>
+                                        {{ $petugas->name }} ({{ $petugas->unit->nama_unit ?? 'Umum' }})
+                                    </option>
+                                @endforeach
+                            </select>
+                            <p id="petugas-empty-hint" class="hidden text-[11px] text-amber-600 mt-1.5 font-medium">
+                                ℹ️ Belum ada akun petugas terdaftar khusus pada bidang ini. Pengaduan akan tetap ditugaskan ke bidang tersebut.
+                            </p>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">
+                                Instruksi / Catatan Penugasan <span class="text-[10px] text-slate-400 font-normal">(Opsional)</span>
+                            </label>
+                            <textarea name="catatan_penugasan"
+                                      rows="2"
+                                      placeholder="Contoh: Mohon koordinasikan dengan bagian terkait untuk pengecekan fisik..."
+                                      class="w-full text-xs rounded-xl border border-slate-300 p-2.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600">{{ old('catatan_penugasan', $pengajuan->catatan_penugasan) }}</textarea>
+                        </div>
+
+                        <button type="submit"
+                                class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold transition shadow-sm flex items-center justify-center gap-1.5">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                            </svg>
+                            <span>{{ $pengajuan->assignedUnit ? 'Perbarui Penugasan' : 'Tugaskan Pengaduan' }}</span>
+                        </button>
+                    </form>
+                </div>
+
                 <!-- Box Identitas Pelapor -->
                 <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6" id="box-identitas-pelapor">
                     <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-100">
@@ -492,11 +490,6 @@
                 </div>
             </div>
         </div>
-    </main>
-
-    <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-400 mt-10">
-        Panel Administrator KOMPLAIN &copy; {{ date('Y') }}
-    </footer>
 
     @if ($pengajuan->metode_identitas === 'anonim' || $pengajuan->is_anonim)
     <!-- Modal Buka Kunci Identitas Anonim -->
@@ -733,6 +726,41 @@
             }
         }
 
+        function filterPetugasByUnit(selectedUnitId, preserveCurrent = false) {
+            const petugasSelect = document.getElementById('select-petugas-id');
+            const emptyHint = document.getElementById('petugas-empty-hint');
+            if (!petugasSelect) return;
+
+            const options = Array.from(petugasSelect.querySelectorAll('option[data-unit]'));
+            let matchCount = 0;
+
+            options.forEach(opt => {
+                const optUnit = opt.getAttribute('data-unit');
+                if (!selectedUnitId || optUnit === String(selectedUnitId)) {
+                    opt.hidden = false;
+                    opt.disabled = false;
+                    matchCount++;
+                } else {
+                    opt.hidden = true;
+                    opt.disabled = true;
+                }
+            });
+
+            if (emptyHint) {
+                if (selectedUnitId && matchCount === 0) {
+                    emptyHint.classList.remove('hidden');
+                } else {
+                    emptyHint.classList.add('hidden');
+                }
+            }
+
+            // Jika option yang saat ini terpilih sekarang tidak valid untuk bidang ini, reset ke default
+            const selectedOpt = petugasSelect.selectedOptions[0];
+            if (selectedOpt && selectedOpt.disabled && !preserveCurrent) {
+                petugasSelect.value = '';
+            }
+        }
+
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') {
                 closeModalBukaAnonim();
@@ -742,7 +770,11 @@
         // Initialize state saat halaman dimuat
         document.addEventListener('DOMContentLoaded', function () {
             handleStatusUtamaChange();
+
+            const unitSelect = document.getElementById('select-assigned-unit');
+            if (unitSelect && unitSelect.value) {
+                filterPetugasByUnit(unitSelect.value, true);
+            }
         });
     </script>
-</body>
-</html>
+@endsection

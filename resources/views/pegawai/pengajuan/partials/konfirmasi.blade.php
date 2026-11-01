@@ -1,8 +1,18 @@
 @if ($pengajuan->perlu_konfirmasi)
     <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 class="text-lg font-bold text-slate-900">Konfirmasi dari Anda</h2>
+        <div class="flex items-start justify-between gap-3 flex-wrap">
+            <h2 class="text-lg font-bold text-slate-900">Konfirmasi dari Anda</h2>
+            @if ($pengajuan->batas_waktu_konfirmasi)
+                <span class="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-800 border border-amber-200/60">
+                    <svg class="w-3.5 h-3.5 text-amber-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Batas: {{ $pengajuan->batas_waktu_konfirmasi->locale('id')->translatedFormat('d M Y, H.i') }}
+                </span>
+            @endif
+        </div>
         <p class="mt-2 text-sm leading-relaxed text-slate-500">
-            Jika kendala teratasi, konfirmasikan selesai. Jika belum, Anda dapat mengajukan keberatan agar aduan ditinjau kembali (maksimal 1 kali).
+            Jika kendala teratasi, konfirmasikan selesai. Jika belum, Anda dapat mengajukan keberatan agar aduan ditinjau kembali (maksimal 1 kali). Batas waktu konfirmasi adalah <strong>3 hari</strong> sebelum sistem mengonfirmasi secara otomatis.
         </p>
 
         <form action="{{ route('pegawai.pengajuan.konfirmasi', $pengajuan) }}" method="POST" class="mt-4">

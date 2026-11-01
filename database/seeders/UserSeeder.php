@@ -46,6 +46,15 @@ class UserSeeder extends Seeder
                 'unit_id' => $tiId,
                 'status_akun' => 'aktif',
             ],
+            [
+                'nip' => '199202022016021004',
+                'nama' => 'Petugas Bidang TI',
+                'email' => 'petugas@komplain.test',
+                'password' => Hash::make('password'),
+                'role' => 'petugas',
+                'unit_id' => $tiId,
+                'status_akun' => 'aktif',
+            ],
         ];
 
         foreach ($users as $userData) {

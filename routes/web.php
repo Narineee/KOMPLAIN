@@ -5,7 +5,10 @@ use App\Http\Controllers\AdminPegawaiController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\KategoriController;
 use App\Http\Controllers\PengajuanController;
+use App\Http\Controllers\PetugasAduanController;
+use App\Http\Controllers\PetugasPengajuanController;
 use App\Http\Controllers\TanggapanController;
+use App\Http\Controllers\UnitController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -34,10 +37,33 @@ Route::middleware(['auth', 'role:pegawai'])->prefix('pegawai')->name('pegawai.')
     Route::get('/pengajuan/buat', [PengajuanController::class, 'create'])->name('pengajuan.create');
     Route::post('/pengajuan', [PengajuanController::class, 'store'])->name('pengajuan.store');
     Route::get('/pengajuan/{pengajuan}', [PengajuanController::class, 'show'])->name('pengajuan.show');
-    Route::get('/pengajuan/{pengajuan}/pdf', [PengajuanController::class, 'pengajuanPdf'])->name('pengajuan.pdf');
     Route::post('/pengajuan/{pengajuan}/konfirmasi', [PengajuanController::class, 'konfirmasi'])->name('pengajuan.konfirmasi');
     Route::get('/pengajuan/{pengajuan}/keberatan', [PengajuanController::class, 'formKeberatan'])->name('pengajuan.keberatan.form');
     Route::post('/pengajuan/{pengajuan}/keberatan', [PengajuanController::class, 'keberatan'])->name('pengajuan.keberatan');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Rute Petugas Bidang
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth', 'role:petugas'])->prefix('petugas')->name('petugas.')->group(function () {
+    Route::get('/dashboard', [PetugasPengajuanController::class, 'dashboard'])->name('dashboard');
+
+    // Penanganan Tugas Bidang (Sebagai Petugas yang Ditugaskan)
+    Route::get('/pengajuan', [PetugasPengajuanController::class, 'index'])->name('pengajuan.index');
+    Route::get('/pengajuan/{pengajuan}', [PetugasPengajuanController::class, 'show'])->name('pengajuan.show');
+    Route::patch('/pengajuan/{pengajuan}/status', [PetugasPengajuanController::class, 'updateStatus'])->name('pengajuan.status');
+    Route::post('/pengajuan/{pengajuan}/tanggapan', [PetugasPengajuanController::class, 'storeTanggapan'])->name('pengajuan.tanggapan');
+
+    // Pengaduan Mandiri Petugas (Aduan Saya & Buat Aduan Sebagai Pelapor)
+    Route::get('/aduan', [PetugasAduanController::class, 'index'])->name('aduan.index');
+    Route::get('/aduan/buat', [PetugasAduanController::class, 'create'])->name('aduan.create');
+    Route::post('/aduan', [PetugasAduanController::class, 'store'])->name('aduan.store');
+    Route::get('/aduan/{pengajuan}', [PetugasAduanController::class, 'show'])->name('aduan.show');
+    Route::post('/aduan/{pengajuan}/konfirmasi', [PetugasAduanController::class, 'konfirmasi'])->name('aduan.konfirmasi');
+    Route::get('/aduan/{pengajuan}/keberatan', [PetugasAduanController::class, 'formKeberatan'])->name('aduan.keberatan.form');
+    Route::post('/aduan/{pengajuan}/keberatan', [PetugasAduanController::class, 'keberatan'])->name('aduan.keberatan');
 });
 
 /*
@@ -57,6 +83,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::patch('/laporan/{pengajuan}/status', [AdminDashboardController::class, 'updateStatus'])->name('laporan.status');
     Route::patch('/laporan/{pengajuan}/tandai-belum-verifikasi', [AdminDashboardController::class, 'tandaiBelumVerifikasi'])->name('laporan.tandai-belum-verifikasi');
     Route::patch('/laporan/{pengajuan}/verifikasi', [AdminDashboardController::class, 'verifikasi'])->name('laporan.verifikasi');
+    Route::patch('/laporan/{pengajuan}/tugaskan', [AdminDashboardController::class, 'tugaskan'])->name('laporan.tugaskan');
     Route::post('/laporan/{pengajuan}/tanggapan', [TanggapanController::class, 'store'])->name('laporan.tanggapan');
 
     // Rekapitulasi Laporan
@@ -65,6 +92,10 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
 
     // Kelola Master Kategori
     Route::resource('kategori', KategoriController::class)->except(['show']);
+
+    // Kelola Master Bidang (Unit Kerja)
+    Route::resource('unit', UnitController::class)->except(['show']);
+    Route::resource('bidang', UnitController::class)->except(['show']);
 
     // Kelola Akun Pegawai & Pengguna
     Route::resource('pegawai', AdminPegawaiController::class)->parameters(['pegawai' => 'user'])->except(['show']);

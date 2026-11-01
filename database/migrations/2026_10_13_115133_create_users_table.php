@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('nama', 150);
             $table->string('email', 150)->nullable()->unique();
             $table->string('password', 255);
-            $table->enum('role', ['pegawai', 'admin'])->default('pegawai');
+            $table->enum('role', ['pegawai', 'admin', 'petugas'])->default('pegawai');
             $table->foreignId('unit_id')->nullable()->constrained('unit')->nullOnDelete()->cascadeOnUpdate();
             $table->enum('status_akun', ['aktif', 'nonaktif'])->default('aktif');
             $table->rememberToken();

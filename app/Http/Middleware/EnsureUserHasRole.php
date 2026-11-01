@@ -24,11 +24,10 @@ class EnsureUserHasRole
         $allowedRoles = [];
         foreach ($roles as $role) {
             $allowedRoles[] = $role;
-            if ($role === 'pegawai') {
-                $allowedRoles[] = 'pengadu';
-            }
-            if ($role === 'pengadu') {
+            if ($role === 'pegawai' || $role === 'pengadu') {
                 $allowedRoles[] = 'pegawai';
+                $allowedRoles[] = 'pengadu';
+                $allowedRoles[] = 'petugas';
             }
         }
 
